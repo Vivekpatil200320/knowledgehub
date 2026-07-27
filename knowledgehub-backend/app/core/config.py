@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     retrieval_score_threshold: float = 0.25
     chat_history_turns: int = 6
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://localhost:3005"
 
 
 settings = Settings()
