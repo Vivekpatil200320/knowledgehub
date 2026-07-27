@@ -67,13 +67,17 @@ isn't invoked can't hallucinate.
 
 **6:00 — Evals (60s)**
 
-Run `python evals/eval_pipeline.py` on camera. Six cases, deterministic assertions,
-no LLM judge. 100% retrieval precision, 100% faithfulness, 6/6.
+Run `python evals/eval_pipeline.py` on camera. Ten cases, deterministic assertions,
+no LLM judge. 100% retrieval precision, completeness, and contamination-free, 10/10.
 
-Emphasise: it tracks *which document* got cited, not just whether the answer looks
-right. A system with broken memory still returns a fluent pricing answer to "what
-about pricing?" — it just cites the wrong document. Faithfulness alone would miss
-that; retrieval precision catches it.
+Emphasise two things. First, it tracks *which document* got cited, not just whether
+the answer looks right — a system with broken memory still returns a fluent pricing
+answer to "what about pricing?", it just cites the wrong document. Second, the suite
+was rebuilt after it passed clean through three real bugs: it now checks completeness
+(every required fact present, catching terse answers) and forbidden terms (no
+hallucination, no cross-document bleed), and `tests/test_eval_checks.py` proves those
+checks reject the actual buggy answers from development — so the harness's teeth don't
+depend on an LLM reproducing a failure on cue.
 
 **7:00 — Close (30s)**
 

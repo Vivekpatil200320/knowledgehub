@@ -169,35 +169,57 @@ the LLM call is skipped entirely rather than made and discarded.
 
 ## Evaluation
 
-Six cases, deterministic substring assertions, no LLM judge — fast, free, and reproducible.
-The tradeoff is brittleness to phrasing, so expected values are pipe-separated alternatives.
+Ten cases, deterministic substring assertions, no LLM judge — fast, free, and reproducible.
 
 ```bash
 python evals/eval_pipeline.py    # ingests the corpus if needed, then runs
 ```
 
-| Case | Retrieval | Faithful |
-|---|---|---|
-| single-turn: services | PASS | PASS |
-| single-turn: specific figure | PASS | PASS |
-| single-turn: second document | PASS | PASS |
-| **follow-up: bare pronoun-style follow-up** | PASS | PASS |
-| **follow-up: topic switch to the other document** | PASS | PASS |
-| refusal: out of corpus | n/a | PASS |
+Each case declares three kinds of check, because a presence-only faithfulness metric is
+what let real bugs ship past the first version of this suite:
 
-**Retrieval precision 100% · Faithfulness 100% · 6/6 passed**
+- **`expected_all`** — every string must appear. Catches terse answers. `"AI Software
+  Engineer."` was once a whole answer to "describe him"; a completeness check rejects it.
+- **`forbidden`** — no string may appear. Catches hallucinated facts and cross-document
+  contamination — things a keyword-presence check can't see, because you can't assert the
+  *presence* of a fact you didn't expect.
+- **`expected_source`** — the document a correct answer must cite. A system with broken
+  memory still returns a fluent pricing answer to "what about pricing?"; it just cites the
+  wrong document, so which document is cited is tracked per-case.
 
-The eval corpus is two documents with **deliberately parallel structure** — both
-`acme-cloud-platform.md` and `zenith-analytics-suite.md` have "Services" and "Pricing"
-sections. That parallelism is the point: a bare "what about pricing?" is genuinely ambiguous
-across the corpus, so the case can only pass if conversation history reached the retrieval
-query. A system with broken memory still returns a fluent, plausible pricing answer here —
-it just cites the wrong document. Measuring which document was cited is what separates the
-two, which is why retrieval precision is tracked per-case rather than only faithfulness.
+**Retrieval precision 100% · Completeness 100% · Contamination-free 100% · 10/10 passed**
 
-The two follow-up cases test opposite failure directions: one requires memory to be
-**applied** (bare follow-up), the other requires it to be **displaced** (topic switch).
-Only asserting the first would let the "invented relationship" bug ship.
+| Case | What it guards |
+|---|---|
+| single-turn: specific figure / second document | basic grounded retrieval |
+| completeness: all three services | terse-answer regression (`expected_all`) |
+| pdf: extraction and a specific fact | the PDF parse path (corpus was markdown-only) |
+| pdf: education pairing (two degrees, two universities) | multi-chunk recall + correct pairing |
+| no contamination: skills stay within the resume | cross-document bleed (`forbidden`) |
+| follow-up: bare pronoun-style follow-up | memory must be **applied** |
+| follow-up: topic switch to the other document | memory must be **displaced** |
+| follow-up: switch to the resume person, then education | memory across a document boundary |
+| refusal: out of corpus | no hallucination when nothing is retrieved |
+
+The corpus is three documents. Two (`acme-cloud-platform.md`, `zenith-analytics-suite.md`)
+have **deliberately parallel structure** — both have Services and Pricing sections — so a
+bare "what about pricing?" is genuinely ambiguous and only resolves if conversation history
+reached the retrieval query. The third (`candidate-profile.pdf`) is a **structured PDF**: a
+fictional résumé whose education section carries two degrees at two universities. It exists
+because every earlier eval was clean markdown, and the two worst production bugs — a dropped
+low-scoring chunk and mis-paired degrees — were PDF-and-structure specific. It's generated
+from `evals/corpus_src/make_resume_pdf.py` (fpdf2, regeneration only) and committed as a
+binary fixture.
+
+The follow-up cases test opposite failure directions: one needs memory **applied**, one
+needs it **displaced**. Asserting only the first would let the "invented relationship" bug
+(condensation attaching the previous topic to a new subject) ship.
+
+**The harness has verified teeth.** `tests/test_eval_checks.py` feeds the check functions the
+actual buggy answers observed during development — the terse `"AI Software Engineer."`, a
+hallucinated third degree, a contaminated skills answer — and asserts each is rejected. That
+way the suite's ability to catch a regression doesn't rest on reproducing an LLM's
+nondeterministic output.
 
 ---
 
@@ -249,7 +271,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 14 tests
+cd knowledgehub-backend && pytest        # 25 tests
 ```
 
 ---

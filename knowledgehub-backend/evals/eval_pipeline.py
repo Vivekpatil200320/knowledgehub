@@ -5,8 +5,18 @@ Run against a live server with the eval corpus ingested:
     python evals/eval_pipeline.py
 
 Assertions are plain substring checks rather than an LLM judge: they are fast,
-free, and reproducible. The tradeoff is brittleness to phrasing, so expected
-keywords are pipe-separated alternatives rather than exact sentences.
+free, and reproducible. The tradeoff is brittleness to phrasing, so each case
+declares its checks explicitly:
+
+  expected_source  the document a correct answer must cite (None = refusal)
+  expected_all     every string must appear (completeness — guards terse answers)
+  expected_any     at least one must appear (phrasing tolerance, e.g. refusals)
+  forbidden        no string may appear (no hallucination, no cross-doc bleed)
+
+The three "all/any/forbidden" checks exist because a presence-only faithfulness
+metric passed while real bugs shipped: a one-line answer satisfies "contains a
+keyword", and a hallucinated or cross-contaminated fact is never a keyword you
+were checking *for*. Completeness and forbidden checks close both gaps.
 """
 
 import json
@@ -20,51 +30,100 @@ BASE_URL = "http://localhost:8000"
 CORPUS_DIR = Path(__file__).parent / "corpus"
 RESULTS_PATH = Path(__file__).parent / "results.json"
 
-# (name, turns, expected_source_filename_or_None, expected_keywords_pipe_separated)
-# Only the FINAL turn is asserted on; earlier turns exist to build conversation history.
 CASES = [
-    (
-        "single-turn: services",
-        ["What services does Acme Cloud Platform offer?"],
-        "acme-cloud-platform.md",
-        "Acme Run|Acme Queue|Acme Vault",
-    ),
-    (
-        "single-turn: specific figure",
-        ["What uptime does Acme Run guarantee?"],
-        "acme-cloud-platform.md",
-        "99.95",
-    ),
-    (
-        "single-turn: second document",
-        ["Which warehouses does Zenith Explore support?"],
-        "zenith-analytics-suite.md",
-        "Snowflake|BigQuery|Postgres",
-    ),
-    (
-        # The core memory test: "pricing" alone is ambiguous across both documents,
-        # so this only passes if turn 1 is carried into the retrieval query.
-        "follow-up: bare pronoun-style follow-up",
-        ["What services does Acme Cloud Platform offer?", "What about pricing?"],
-        "acme-cloud-platform.md",
-        "0.000024|vCPU-second|per-service",
-    ),
-    (
-        # Memory must NOT over-apply: the new subject should displace the old one.
-        "follow-up: topic switch to the other document",
-        [
+    # --- single-turn, single-fact ---------------------------------------------
+    {
+        "name": "single-turn: specific figure",
+        "turns": ["What uptime does Acme Run guarantee?"],
+        "expected_source": "acme-cloud-platform.md",
+        "expected_all": ["99.95"],
+    },
+    {
+        "name": "single-turn: second document",
+        "turns": ["Which warehouses does Zenith Explore support?"],
+        "expected_source": "zenith-analytics-suite.md",
+        "expected_all": ["Snowflake", "BigQuery", "Postgres"],
+    },
+    # --- completeness: a terse answer must fail (the 'AI Software Engineer.' bug)
+    {
+        "name": "completeness: all three services, not just one",
+        "turns": ["What services does Acme Cloud Platform offer?"],
+        "expected_source": "acme-cloud-platform.md",
+        "expected_all": ["Acme Run", "Acme Queue", "Acme Vault"],
+    },
+    # --- PDF extraction path (the corpus was previously markdown-only) ---------
+    {
+        "name": "pdf: extraction and a specific fact",
+        "turns": ["Where does Priya Nair currently work?"],
+        "expected_source": "candidate-profile.pdf",
+        "expected_all": ["Meridian Freight"],
+        "forbidden": ["Acme", "Zenith"],
+    },
+    # --- structured PDF: multi-fact pairing across a chunk boundary ------------
+    # The regression that motivated narrative ordering. A correct answer names both
+    # degrees AND both universities AND both GPAs. If ordering breaks, the model
+    # mis-pairs or invents an entry and drops one of these exact tokens.
+    {
+        "name": "pdf: education pairing (two degrees, two universities)",
+        "turns": ["What are Priya Nair's degrees and where did she study?"],
+        "expected_source": "candidate-profile.pdf",
+        "expected_all": [
+            "Ashford Institute of Technology",
+            "Westbrook University",
+            "Master",
+            "Bachelor",
+            "3.8",
+            "3.6",
+        ],
+        "forbidden": ["Acme", "Zenith", "Parul"],
+    },
+    # --- no cross-document contamination (negative assertion) -----------------
+    {
+        "name": "no contamination: skills answer stays within the resume",
+        "turns": ["What programming languages does Priya Nair use?"],
+        "expected_source": "candidate-profile.pdf",
+        "expected_all": ["Python", "Go", "SQL"],
+        "forbidden": ["Acme", "Zenith", "Snowflake", "BigQuery"],
+    },
+    # --- follow-up: memory must be applied (bare pronoun-style) ----------------
+    {
+        "name": "follow-up: bare pronoun-style follow-up",
+        "turns": ["What services does Acme Cloud Platform offer?", "What about pricing?"],
+        "expected_source": "acme-cloud-platform.md",
+        # A complete pricing answer prices all three services, not just one.
+        "expected_all": ["Acme Run", "Acme Queue", "Acme Vault"],
+        "expected_any": ["0.000024", "vCPU-second"],
+    },
+    # --- follow-up: memory must be displaced (topic switch) -------------------
+    {
+        "name": "follow-up: topic switch to the other document",
+        "turns": [
             "What services does Acme Cloud Platform offer?",
             "And what about Zenith? How much is it?",
         ],
-        "zenith-analytics-suite.md",
-        "45|600|per seat",
-    ),
-    (
-        "refusal: out of corpus",
-        ["What is the capital of France?"],
-        None,
-        "couldn't find|not|don't|cannot|unable|outside",
-    ),
+        "expected_source": "zenith-analytics-suite.md",
+        "expected_any": ["45", "600", "per seat"],
+        "forbidden": ["Acme Run", "Acme Queue"],
+    },
+    # --- follow-up spanning documents: memory + PDF ---------------------------
+    {
+        "name": "follow-up: switch to the resume person, then ask education",
+        "turns": [
+            "Tell me about Priya Nair.",
+            "Where did she study?",
+        ],
+        "expected_source": "candidate-profile.pdf",
+        "expected_all": ["Ashford Institute of Technology", "Westbrook University"],
+        "forbidden": ["Acme", "Zenith"],
+    },
+    # --- refusal --------------------------------------------------------------
+    {
+        "name": "refusal: out of corpus",
+        "turns": ["What is the capital of France?"],
+        "expected_source": None,
+        "expected_any": ["couldn't find", "not", "don't", "cannot", "unable", "outside"],
+        "forbidden": ["Paris"],
+    },
 ]
 
 
@@ -72,7 +131,7 @@ def ingest_corpus(client: httpx.Client) -> None:
     existing = {d["filename"] for d in client.get(f"{BASE_URL}/api/documents").json()}
     pending = []
 
-    for path in sorted(CORPUS_DIR.glob("*.md")):
+    for path in sorted(list(CORPUS_DIR.glob("*.md")) + list(CORPUS_DIR.glob("*.pdf"))):
         if path.name in existing:
             continue
         with path.open("rb") as handle:
@@ -95,15 +154,20 @@ def ingest_corpus(client: httpx.Client) -> None:
         time.sleep(2)
 
 
-def check_retrieval_hit(citations: list[dict], expected_source: str | None) -> bool | None:
+def check_retrieval_hit(citations: list[dict], expected_source) -> bool | None:
     if expected_source is None:
-        return None  # not applicable — refusal cases cite nothing
+        return None  # not applicable — refusal cites nothing
     return any(expected_source in c["filename"] for c in citations)
 
 
-def check_faithfulness(answer: str, expected_keywords: str) -> bool:
+def missing_terms(answer: str, terms: list[str]) -> list[str]:
     lowered = answer.lower()
-    return any(keyword.lower() in lowered for keyword in expected_keywords.split("|"))
+    return [t for t in terms if t.lower() not in lowered]
+
+
+def present_terms(answer: str, terms: list[str]) -> list[str]:
+    lowered = answer.lower()
+    return [t for t in terms if t.lower() in lowered]
 
 
 def run_case(client: httpx.Client, turns: list[str]) -> dict:
@@ -138,42 +202,69 @@ def main() -> int:
         ingest_corpus(client)
 
         results = []
-        for name, turns, expected_source, expected_keywords in CASES:
-            outcome = run_case(client, turns)
-            retrieval_hit = check_retrieval_hit(outcome["citations"], expected_source)
-            faithful = check_faithfulness(outcome["answer"], expected_keywords)
+        for case in CASES:
+            outcome = run_case(client, case["turns"])
+            answer = outcome["answer"]
+
+            retrieval_hit = check_retrieval_hit(outcome["citations"], case["expected_source"])
+            missing = missing_terms(answer, case.get("expected_all", []))
+            any_terms = case.get("expected_any", [])
+            any_ok = bool(present_terms(answer, any_terms)) if any_terms else True
+            leaked = present_terms(answer, case.get("forbidden", []))
+
+            passed = (
+                retrieval_hit is not False
+                and not missing
+                and any_ok
+                and not leaked
+            )
 
             results.append(
                 {
-                    "case": name,
-                    "turns": turns,
+                    "case": case["name"],
+                    "turns": case["turns"],
                     "condensed_query": outcome["condensed_query"],
                     "retrieval_hit": retrieval_hit,
-                    "faithful": faithful,
-                    "passed": faithful and retrieval_hit is not False,
+                    "complete": not missing,
+                    "missing_terms": missing,
+                    "any_ok": any_ok,
+                    "contamination_free": not leaked,
+                    "leaked_terms": leaked,
+                    "passed": passed,
                     "latency_s": outcome["latency_s"],
-                    "answer": outcome["answer"],
+                    "answer": answer,
                     "cited_files": sorted({c["filename"] for c in outcome["citations"]}),
                 }
             )
 
-    print(f"\n{'case':<48} {'retrieval':<10} {'faithful':<9} {'latency':<8}")
-    print("-" * 78)
+    print(
+        f"\n{'case':<52} {'retr':<6} {'compl':<6} {'clean':<6} {'pass':<5}"
+    )
+    print("-" * 82)
     for r in results:
-        retrieval = "n/a" if r["retrieval_hit"] is None else ("PASS" if r["retrieval_hit"] else "FAIL")
+        retr = "n/a" if r["retrieval_hit"] is None else ("ok" if r["retrieval_hit"] else "FAIL")
         print(
-            f"{r['case']:<48} {retrieval:<10} "
-            f"{'PASS' if r['faithful'] else 'FAIL':<9} {r['latency_s']:<8}"
+            f"{r['case']:<52} {retr:<6} "
+            f"{'ok' if r['complete'] and r['any_ok'] else 'FAIL':<6} "
+            f"{'ok' if r['contamination_free'] else 'FAIL':<6} "
+            f"{'PASS' if r['passed'] else 'FAIL':<5}"
         )
+        if not r["passed"]:
+            if r["missing_terms"]:
+                print(f"      missing: {r['missing_terms']}")
+            if r["leaked_terms"]:
+                print(f"      leaked:  {r['leaked_terms']}")
 
     applicable = [r for r in results if r["retrieval_hit"] is not None]
     precision = sum(r["retrieval_hit"] for r in applicable) / len(applicable)
-    faithfulness = sum(r["faithful"] for r in results) / len(results)
+    completeness = sum(r["complete"] and r["any_ok"] for r in results) / len(results)
+    clean = sum(r["contamination_free"] for r in results) / len(results)
     passed = sum(r["passed"] for r in results)
 
-    print("-" * 78)
-    print(f"Retrieval precision: {precision:.0%}  ({len(applicable)} applicable cases)")
-    print(f"Faithfulness:        {faithfulness:.0%}  ({len(results)} cases)")
+    print("-" * 82)
+    print(f"Retrieval precision: {precision:.0%}  ({len(applicable)} applicable)")
+    print(f"Completeness:        {completeness:.0%}  ({len(results)} cases)")
+    print(f"Contamination-free:  {clean:.0%}  ({len(results)} cases)")
     print(f"Passed:              {passed}/{len(results)}")
 
     print("\nCondensed queries for multi-turn cases (the memory mechanism, made visible):")
@@ -185,7 +276,8 @@ def main() -> int:
         json.dumps(
             {
                 "retrieval_precision": precision,
-                "faithfulness": faithfulness,
+                "completeness": completeness,
+                "contamination_free": clean,
                 "passed": passed,
                 "total": len(results),
                 "cases": results,
