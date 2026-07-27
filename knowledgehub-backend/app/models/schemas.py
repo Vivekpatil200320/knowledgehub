@@ -1,0 +1,55 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class DocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    filename: str
+    content_type: str
+    status: str
+    status_detail: str | None = None
+    chunk_count: int | None = None
+    created_at: datetime
+
+
+class Citation(BaseModel):
+    document_id: str
+    filename: str
+    chunk_index: int
+    snippet: str
+    score: float
+
+
+class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    citations: list[Citation] | None = None
+    condensed_query: str | None = None
+    created_at: datetime
+
+
+class ConversationCreate(BaseModel):
+    title: str | None = None
+
+
+class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str | None = None
+    created_at: datetime
+
+
+class MessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ErrorResponse(BaseModel):
+    detail: str
