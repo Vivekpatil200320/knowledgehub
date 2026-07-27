@@ -20,8 +20,16 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 20
     upload_dir: str = "./uploads"
 
-    retrieval_top_k: int = 5
-    retrieval_score_threshold: float = 0.25
+    retrieval_top_k: int = 6
+    # Refusal is judged on the BEST hit only: if nothing in the corpus is even close,
+    # the question isn't answerable here. Measured separation on the eval corpus is
+    # wide — in-corpus questions top out around 0.45-0.50, out-of-corpus below 0.12.
+    refusal_score_threshold: float = 0.20
+    # Supporting chunks only need to be plausibly related to earn a place in the
+    # context window. Kept well below the refusal bar so that a question which clearly
+    # IS answerable still gets its lower-ranked evidence (e.g. the education section
+    # of a resume, which scores far below the header block).
+    context_score_floor: float = 0.05
     chat_history_turns: int = 6
 
     cors_origins: str = "http://localhost:3000,http://localhost:3005"

@@ -127,6 +127,27 @@ answer the question.
 window, not parsed out of the model's output. Asking the LLM to self-report its sources adds
 a failure mode (and often a second call) for information already known exactly.
 
+**Relevance decides what the model sees; the document decides what order it reads.**
+Retrieval returns chunks ranked by score, which scrambles any document whose meaning depends
+on sequence. Testing against a real résumé, the model was asked for education and answered
+with three degrees — one of which didn't exist. The EDUCATION section straddled a chunk
+boundary, so `MIT ADT University, Pune 2024-2026` sat at the end of one chunk and the degree
+line it belongs to at the start of the next; delivered in relevance order the model paired
+each degree with the wrong university and invented a third. Context is now sorted back into
+`(document_id, chunk_index)` order before generation, while citations stay ranked by
+relevance. Chunk size also moved from 512/64 to 1024/128: 512 was carried over from a
+prose-PDF project and splits structured documents mid-record.
+
+**Two thresholds, not one.** Deciding *"is this answerable?"* and *"is this chunk worth
+including?"* are different questions, and one number answered both badly. A single 0.25 bar
+tuned to reject nonsense also discarded the résumé chunk containing the education section —
+it scored 0.204, well below the header block's 0.464 — so the system confidently reported
+information it was holding. Refusal is now judged on the **top hit only**
+(`refusal_score_threshold`, 0.20), while supporting chunks need only clear a much lower
+`context_score_floor` (0.05). Measured on the corpus, in-corpus questions score 0.445-0.503
+at the top hit and out-of-corpus 0.024-0.114, so the refusal bar sits in a wide empty gap
+rather than being fitted to a single example.
+
 **Ingestion returns before it finishes.** Upload inserts a row, schedules a `BackgroundTask`,
 and returns `pending` immediately; the task advances the row through `processing` →
 `ready`/`failed` and the UI polls. A 200-page PDF would otherwise block the request past any
@@ -272,6 +293,10 @@ exists purely for debuggability and evals; it isn't needed to serve a response.
   rather than silently ingesting an empty document.
 - `BackgroundTasks` runs in-process: ingestion restarts are lost if the container dies
   mid-job. A durable queue is the right answer beyond demo scale.
-- The similarity threshold (0.25) is tuned against this corpus and embedding model. It is a
-  genuine precision/recall dial, not a universal constant — too high refuses answerable
-  questions, too low lets weak context through to generation.
+- The similarity thresholds are tuned against this corpus and embedding model. They are
+  genuine precision/recall dials, not universal constants — a different embedding model
+  produces a different score distribution and would need re-measuring, which is why the
+  observed in-corpus/out-of-corpus ranges are written down above rather than just the values.
+- Chunking is fixed-size, so a section longer than 1024 characters still splits. Layout-aware
+  chunking (splitting on document structure rather than character count) is the real fix for
+  structured documents like resumes; narrative ordering mitigates it rather than solving it.

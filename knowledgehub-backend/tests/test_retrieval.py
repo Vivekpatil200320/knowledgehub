@@ -1,5 +1,7 @@
 import asyncio
 
+import pytest
+
 from app.services import retrieval_service
 from app.services.condensation_service import condense, format_history
 from app.services.text_splitter import split_text
@@ -32,19 +34,36 @@ def test_split_text_tags_chunks_with_document_metadata():
     assert [c["metadata"]["chunk_index"] for c in chunks] == list(range(len(chunks)))
 
 
-def test_above_threshold_filters_weak_matches(monkeypatch):
-    monkeypatch.setattr(retrieval_service.settings, "retrieval_score_threshold", 0.25)
-
-    kept = retrieval_service.above_threshold([chunk(0.9), chunk(0.3), chunk(0.1)])
-
-    assert [c["score"] for c in kept] == [0.9, 0.3]
+@pytest.fixture(autouse=True)
+def thresholds(monkeypatch):
+    monkeypatch.setattr(retrieval_service.settings, "refusal_score_threshold", 0.20)
+    monkeypatch.setattr(retrieval_service.settings, "context_score_floor", 0.05)
 
 
-def test_above_threshold_can_return_nothing(monkeypatch):
-    """Empty result is what triggers the structural refusal short-circuit."""
-    monkeypatch.setattr(retrieval_service.settings, "retrieval_score_threshold", 0.25)
+def test_weak_top_hit_refuses_everything():
+    """Nothing in the corpus is close, so the question is unanswerable here."""
+    assert retrieval_service.select_context([chunk(0.11), chunk(0.09)]) == []
 
-    assert retrieval_service.above_threshold([chunk(0.05)]) == []
+
+def test_strong_top_hit_keeps_weaker_supporting_chunks():
+    """The regression that motivated splitting the thresholds.
+
+    A resume's education section scores far below its header block. A single bar
+    tuned to reject nonsense also rejected the chunk holding the actual answer.
+    """
+    kept = retrieval_service.select_context([chunk(0.46), chunk(0.20), chunk(0.10)])
+
+    assert [c["score"] for c in kept] == [0.46, 0.20, 0.10]
+
+
+def test_noise_below_the_floor_is_still_excluded():
+    kept = retrieval_service.select_context([chunk(0.46), chunk(0.01)])
+
+    assert [c["score"] for c in kept] == [0.46]
+
+
+def test_no_hits_at_all_refuses():
+    assert retrieval_service.select_context([]) == []
 
 
 def test_to_citations_shape():
@@ -102,7 +121,6 @@ def test_ensure_collection_reraises_real_failures(monkeypatch):
 
     monkeypatch.setattr(vector_store, "get_client", lambda: BrokenClient())
 
-    import pytest
 
     with pytest.raises(RuntimeError, match="connection refused"):
         vector_store.ensure_collection(2048)

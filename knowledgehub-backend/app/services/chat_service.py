@@ -10,7 +10,12 @@ from app.core.db import SessionLocal
 from app.models.orm import Message
 from app.services.condensation_service import condense
 from app.services.llm_service import stream_grounded_answer
-from app.services.retrieval_service import above_threshold, retrieve, to_citations
+from app.services.retrieval_service import (
+    narrative_order,
+    retrieve,
+    select_context,
+    to_citations,
+)
 
 REFUSAL_MESSAGE = (
     "I couldn't find anything in the uploaded documents that answers that. "
@@ -69,7 +74,7 @@ async def _prepare_turn(db: Session, conversation_id: str, content: str) -> tupl
     _persist_user_message(db, conversation_id, content)
 
     condensed_query = await condense(history, content)
-    chunks = above_threshold(retrieve(condensed_query))
+    chunks = select_context(retrieve(condensed_query))
     return condensed_query, chunks
 
 
@@ -81,7 +86,13 @@ def answer_message(db: Session, conversation_id: str, content: str) -> Message:
         if not chunks:
             return REFUSAL_MESSAGE, [], condensed_query
 
-        parts = [token async for token in stream_grounded_answer(condensed_query, chunks)]
+        # Generation reads in document order; citations stay ranked by relevance.
+        parts = [
+            token
+            async for token in stream_grounded_answer(
+                condensed_query, narrative_order(chunks)
+            )
+        ]
         return "".join(parts), to_citations(chunks), condensed_query
 
     answer, citations, condensed_query = asyncio.run(_run())
@@ -111,7 +122,7 @@ async def stream_answer(conversation_id: str, content: str) -> AsyncGenerator[st
             return
 
         parts: list[str] = []
-        async for token in stream_grounded_answer(condensed_query, chunks):
+        async for token in stream_grounded_answer(condensed_query, narrative_order(chunks)):
             parts.append(token)
             yield _sse("token", token)
 
