@@ -34,6 +34,9 @@ export interface Conversation {
   id: string;
   title: string | null;
   created_at: string;
+  /** Newest message time, falling back to created_at for an unused thread. */
+  last_message_at: string;
+  message_count: number;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -64,6 +67,9 @@ export const createConversation = () =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
   });
+
+export const deleteConversation = (id: string) =>
+  request<void>(`/conversations/${id}`, { method: "DELETE" });
 
 export const listMessages = (conversationId: string) =>
   request<ChatMessage[]>(`/conversations/${conversationId}/messages`);

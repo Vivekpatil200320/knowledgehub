@@ -3,8 +3,32 @@ from app.services.embedding_service import embed_query
 from app.services.vector_store import search
 
 
+def dedupe(chunks: list[dict]) -> list[dict]:
+    """Collapse repeats of the same passage, keeping the best-scoring copy.
+
+    Uploading the same file twice is an ordinary thing to do, and it produces two
+    document_ids over identical text. Without this, top-k fills with the same
+    passage twice: the model re-reads it, the citation list repeats itself, and
+    half the context budget buys nothing. Keyed on the text rather than on
+    (document_id, chunk_index) so it catches copies across documents too.
+    """
+    seen: set[str] = set()
+    unique = []
+    for chunk in chunks:
+        key = " ".join(chunk["text"].split())
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(chunk)
+    return unique
+
+
 def retrieve(query: str, top_k: int | None = None) -> list[dict]:
-    return search(embed_query(query), top_k or settings.retrieval_top_k)
+    limit = top_k or settings.retrieval_top_k
+    # Over-fetch so that discarding duplicates doesn't shrink the context below
+    # the configured budget.
+    hits = search(embed_query(query), limit * 2)
+    return dedupe(hits)[:limit]
 
 
 def select_context(chunks: list[dict]) -> list[dict]:

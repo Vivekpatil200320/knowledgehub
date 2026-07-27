@@ -124,3 +124,43 @@ def test_ensure_collection_reraises_real_failures(monkeypatch):
 
     with pytest.raises(RuntimeError, match="connection refused"):
         vector_store.ensure_collection(2048)
+
+
+def chunk_with(text, score, doc="doc-a", index=0):
+    return {
+        "text": text,
+        "score": score,
+        "metadata": {"document_id": doc, "filename": "f.md", "chunk_index": index},
+    }
+
+
+def test_dedupe_collapses_the_same_passage_across_documents():
+    """Uploading a file twice yields two document_ids over identical text."""
+    hits = [
+        chunk_with("Pricing is $45 per seat.", 0.54, doc="doc-a"),
+        chunk_with("Pricing is $45 per seat.", 0.54, doc="doc-b"),
+        chunk_with("Support answers within a day.", 0.31, doc="doc-a", index=1),
+    ]
+
+    kept = retrieval_service.dedupe(hits)
+
+    assert [c["text"] for c in kept] == [
+        "Pricing is $45 per seat.",
+        "Support answers within a day.",
+    ]
+    assert kept[0]["metadata"]["document_id"] == "doc-a"  # best-scoring copy first
+
+
+def test_dedupe_ignores_whitespace_differences():
+    hits = [
+        chunk_with("Pricing  is\n$45.", 0.5),
+        chunk_with("Pricing is $45.", 0.4, doc="doc-b"),
+    ]
+
+    assert len(retrieval_service.dedupe(hits)) == 1
+
+
+def test_dedupe_keeps_genuinely_different_passages():
+    hits = [chunk_with("First.", 0.5), chunk_with("Second.", 0.4, index=1)]
+
+    assert len(retrieval_service.dedupe(hits)) == 2

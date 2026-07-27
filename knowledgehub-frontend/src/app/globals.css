@@ -1,26 +1,126 @@
 @import "tailwindcss";
 
+/* Semantic tokens, mapped per scheme. Components reference these rather than
+   raw neutral-* pairs, so a theme change happens in one place and light mode
+   can be tuned without hunting dark: variants through every component. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --surface: #ffffff;          /* page background */
+  --surface-raised: #f8fafc;   /* panels, sidebars */
+  --surface-sunken: #f1f5f9;   /* inputs, code, inset areas */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #475569;       /* 7.0:1 on --surface */
+  /* Tuned against --accent-soft, not white: the selected sidebar row sits on the
+     tint, and #64748b measured 4.37:1 there — passing on the page but failing on
+     the one surface this text actually appears on. */
+  --text-subtle: #5b6a7f;      /* 5.1:1 on --accent-soft, 6.4:1 on --surface */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-fg: #ffffff;
+  --accent-soft: #eff6ff;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --ring: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface: #0b0f19;
+    --surface-raised: #111827;
+    --surface-sunken: #1e293b;
+    --border: #1f2937;
+    --border-strong: #334155;
+    --text: #f1f5f9;
+    --text-muted: #b0bccd;
+    --text-subtle: #94a3b8;
+    /* Lightened rather than reused: the light-mode accent is too dark against a
+       dark surface to read as an action colour. */
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-fg: #0b0f19;
+    --accent-soft: #172554;
+    --danger: #f87171;
+    --danger-soft: #2a1416;
+    --success: #34d399;
+    --success-soft: #0c2a22;
+    --warning: #fbbf24;
+    --warning-soft: #2b1f07;
+    --ring: #60a5fa;
   }
 }
 
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* NOTE: deliberately no `font-family` on body. A hardcoded Arial stack used to
+   live here and silently overrode the webfont the layout loads. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Motion opts out at the source rather than per-component, so a newly added
+   transition can't ship without honouring the preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Typing indicator shown until the first streamed token arrives. */
+@keyframes typing-pulse {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.typing-dot {
+  animation: typing-pulse 1.2s infinite ease-in-out;
+}
+
+/* Panel scrollbars: findable, but not competing with content. */
+.scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.scrollbar-slim::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 9999px;
+}
+.scrollbar-slim::-webkit-scrollbar-track {
+  background: transparent;
 }

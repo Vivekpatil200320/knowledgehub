@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileText } from "lucide-react";
 import type { Citation } from "@/lib/api";
 
 export function CitationPanel({ citations }: { citations: Citation[] }) {
@@ -9,27 +10,38 @@ export function CitationPanel({ citations }: { citations: Citation[] }) {
   if (citations.length === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-neutral-200 pt-3 dark:border-neutral-700">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+    <div className="mt-3 border-t border-border pt-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
         Sources
       </p>
-      <div className="flex flex-wrap gap-2">
-        {citations.map((citation, index) => (
-          <button
-            key={`${citation.document_id}-${citation.chunk_index}`}
-            onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className={`rounded-full border px-2.5 py-1 text-xs transition ${
-              openIndex === index
-                ? "border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900"
-                : "border-neutral-300 text-neutral-600 hover:border-neutral-500 dark:border-neutral-600 dark:text-neutral-300"
-            }`}
-          >
-            {citation.filename} · chunk {citation.chunk_index}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-1.5">
+        {citations.map((citation, index) => {
+          const isOpen = openIndex === index;
+          return (
+            <button
+              key={`${citation.document_id}-${citation.chunk_index}`}
+              type="button"
+              onClick={() => setOpenIndex(isOpen ? null : index)}
+              aria-expanded={isOpen}
+              title={`${citation.filename} — chunk ${citation.chunk_index}`}
+              className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-raised ${
+                isOpen
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-border text-text-muted hover:border-border-strong hover:text-text"
+              }`}
+            >
+              <FileText aria-hidden="true" className="size-3.5 shrink-0" />
+              <span className="truncate">{citation.filename}</span>
+              <span className="shrink-0 tabular-nums opacity-70">
+                #{citation.chunk_index}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
       {openIndex !== null && (
-        <p className="mt-2 rounded-md bg-neutral-100 px-3 py-2 font-mono text-xs leading-relaxed text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+        <p className="mt-2 rounded-md bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-text-muted">
           {citations[openIndex].snippet}…
         </p>
       )}

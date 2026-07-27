@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,27 +26,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* The workspace owns the full viewport and manages its own scroll regions,
+          so the document itself never scrolls. */}
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100`}
+        className={`${inter.variable} ${jetbrainsMono.variable} h-dvh overflow-hidden bg-surface font-sans text-text antialiased`}
       >
-        <header className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-          <nav className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-4">
-            <span className="font-semibold tracking-tight">KnowledgeHub</span>
-            <Link
-              href="/documents"
-              className="text-sm text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-            >
-              Documents
-            </Link>
-            <Link
-              href="/chat"
-              className="text-sm text-neutral-600 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-            >
-              Chat
-            </Link>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        {children}
       </body>
     </html>
   );

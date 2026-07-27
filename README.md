@@ -148,6 +148,13 @@ information it was holding. Refusal is now judged on the **top hit only**
 at the top hit and out-of-corpus 0.024-0.114, so the refusal bar sits in a wide empty gap
 rather than being fitted to a single example.
 
+**Duplicate passages are collapsed before they reach the model.** Uploading the same file
+twice is an ordinary thing to do, and it produces two `document_id`s over identical text —
+so top-k fills with the same passage twice, the model re-reads it, the citation list repeats
+itself, and half the context budget buys nothing. Retrieval over-fetches, deduplicates on the
+chunk text (not on `(document_id, chunk_index)`, which would miss copies *across* documents),
+then trims to the configured budget.
+
 **Ingestion returns before it finishes.** Upload inserts a row, schedules a `BackgroundTask`,
 and returns `pending` immediately; the task advances the row through `processing` →
 `ready`/`failed` and the UI polls. A 200-page PDF would otherwise block the request past any
@@ -232,7 +239,8 @@ nondeterministic output.
 | `GET` | `/api/documents/{id}` | Single document — poll this for status |
 | `DELETE` | `/api/documents/{id}` | Remove document and its vectors |
 | `POST` | `/api/conversations` | Start a conversation |
-| `GET` | `/api/conversations` | List conversations |
+| `GET` | `/api/conversations` | List with `last_message_at` + `message_count`, newest activity first |
+| `DELETE` | `/api/conversations/{id}` | Remove a conversation and its messages |
 | `POST` | `/api/conversations/{id}/messages` | Send a message, get the full answer |
 | `POST` | `/api/conversations/{id}/messages/stream` | Same, streamed token-by-token over SSE |
 | `GET` | `/api/conversations/{id}/messages` | Full thread with citations |
@@ -271,8 +279,34 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 25 tests
+cd knowledgehub-backend && pytest        # 40 tests
 ```
+
+---
+
+## Interface
+
+One page, three panes: chat history left, conversation centre, ingested documents right.
+Below 1280px the documents pane collapses to a toggle; below 1024px both become slide-over
+drawers. There is no second route — but the selected conversation lives in the URL as
+`/?c=<id>`, so refresh, back/forward and link-sharing still work. Collapsing to a single
+page shouldn't cost addressability.
+
+Three decisions worth naming:
+
+- **Conversations are created on first send, not on "New chat".** Eagerly POSTing a
+  conversation when the button is clicked leaves an empty untitled row behind every time
+  someone opens the app and changes their mind.
+- **Threads name themselves** from the first user message, and never rename after. A title
+  that changed every turn would be unfindable.
+- **The condensed query is shown in the UI**, under each answer. It's the one piece of the
+  memory mechanism a user can otherwise only infer, and it makes a wrong retrieval legible
+  instead of mysterious.
+
+Verified at 1440/1280/768/375, in light and dark, with a keyboard-only pass. Every text
+element in both themes clears WCAG AA contrast (checked programmatically, not by eye —
+`--text-subtle` had to be darkened after measuring 4.37:1 on the *selected* sidebar row,
+which is tinted, even though it passed against the page background).
 
 ---
 
@@ -284,6 +318,9 @@ documents      id, filename, stored_path, content_type,
                chunk_count, created_at, updated_at
 
 conversations  id, title, created_at
+               (last_message_at + message_count are computed per request,
+                not stored — create_all() can't add columns to an existing
+                SQLite file and this project ships without migrations)
 
 messages       id, conversation_id, role, content,
                citations (JSON), condensed_query, created_at

@@ -18,11 +18,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.13,
-      "answer": "\u2022 Acme Run guarantees 99.95% monthly uptime.",
+      "latency_s": 3.06,
+      "answer": "\u2022 99.95% monthly uptime.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -39,11 +39,12 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.09,
-      "answer": "Zenith Explore supports Snowflake, BigQuery, and Postgres.",
+      "latency_s": 1.43,
+      "answer": "\u2022 Snowflake\n\u2022 BigQuery\n\u2022 Postgres",
       "cited_files": [
         "acme-cloud-platform.md",
         "candidate-profile.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -60,12 +61,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.53,
-      "answer": "Acme Cloud Platform offers three services:\n\n- **Acme Run** \u2014 deploys a container image and scales it automatically based on incoming request volume. Cold start latency is typically under 400ms.\n- **Acme Queue** \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n- **Acme Vault** \u2014 encrypted secret storage with automatic key rotation every 90 days.",
+      "latency_s": 2.1,
+      "answer": "Acme Cloud Platform offers three services:\n\n- **Acme Run** \u2014 deploys a container image and scales it automatically based on incoming request volume.\n- **Acme Queue** \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n- **Acme Vault** \u2014 encrypted secret storage with automatic key rotation every 90 days.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
-        "zenith-analytics-suite.md"
+        "resume-swe.pdf"
       ]
     },
     {
@@ -81,10 +81,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.14,
-      "answer": "Priya Nair currently works as a Senior Backend Engineer at Meridian Freight.",
+      "latency_s": 1.29,
+      "answer": "Senior Backend Engineer, Meridian Freight (2023 - present)",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -100,10 +101,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.56,
-      "answer": "Priya Nair's degrees are:\n\n- Master of Science in Computer Science from Ashford Institute of Technology in Boston, completed from 2018 to 2020 with a GPA of 3.8/4.0.\n- Bachelor of Engineering in Information Technology from Westbrook University in Portland, completed from 2014 to 2018 with a GPA of 3.6/4.0.",
+      "latency_s": 1.69,
+      "answer": "Priya Nair's degrees are:\n\n- Master of Science in Computer Science from Ashford Institute of Technology, Boston, with a GPA of 3.8/4.0 (completed in 2018-2020).\n- Bachelor of Engineering in Information Technology from Westbrook University, Portland, with a GPA of 3.6/4.0 (completed in 2014-2018).",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -119,11 +121,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 1.06,
+      "latency_s": 1.32,
       "answer": "\u2022 Python\n\u2022 Go\n\u2022 SQL",
       "cited_files": [
-        "acme-cloud-platform.md",
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -140,11 +142,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 4.16,
-      "answer": "Acme Cloud Platform is billed monthly on a per-service basis. \n\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n\nAnnual prepayment reduces the total bill by 15%. There are no charges for data transfer between services inside the same region.",
+      "latency_s": 4.96,
+      "answer": "The pricing of Acme Cloud Platform is billed monthly on a per-service basis. \n\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n\nAnnual prepayment reduces the total bill by 15%. There are no charges for data transfer between services inside the same region.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -162,11 +164,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 4.8,
-      "answer": "Zenith Analytics Suite is licensed per seat, not per query. The pricing details are as follows:\n\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\nThere is no free tier. A 30-day trial is available with all features unlocked.\nNon-profit organisations receive a 40% discount on all seats.",
+      "latency_s": 4.02,
+      "answer": "Zenith Analytics Suite is licensed per seat, not per query. The pricing for Zenith Analytics Suite is as follows:\n\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n\nThere is no free tier. A 30-day trial is available with all features unlocked. Non-profit organisations receive a 40% discount on all seats.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -184,10 +186,11 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 5.19,
-      "answer": "Priya Nair studied at the following institutions:\n\n\u2022 Ashford Institute of Technology, Boston (Master of Science in Computer Science, 2018-2020)\n\u2022 Westbrook University, Portland (Bachelor of Engineering in Information Technology, 2014-2018)",
+      "latency_s": 5.71,
+      "answer": "Priya Nair studied at the following institutions:\n\n- Ashford Institute of Technology, Boston (Master of Science in Computer Science, 2018-2020)\n- Westbrook University, Portland (Bachelor of Engineering in Information Technology, 2014-2018)",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -203,7 +206,7 @@
       "contamination_free": true,
       "leaked_terms": [],
       "passed": true,
-      "latency_s": 0.72,
+      "latency_s": 0.52,
       "answer": "I couldn't find anything in the uploaded documents that answers that. Try rephrasing, or upload a document that covers it.",
       "cited_files": []
     }

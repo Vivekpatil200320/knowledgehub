@@ -11,9 +11,14 @@ then delete any existing documents so the upload is live on camera.
 The interesting part isn't retrieval, it's making follow-up questions work, so
 that's where most of this demo goes."
 
+One screen, three panes: history on the left, conversation in the middle, the
+documents you've ingested on the right. Nothing here is a separate page — you can
+see what the assistant can actually read while you're asking it questions.
+
 **0:30 — Upload (45s)**
 
-Drag both files from `knowledgehub-backend/evals/corpus/` onto the drop zone.
+Drag both files from `knowledgehub-backend/evals/corpus/` onto the drop zone in the
+right-hand panel.
 
 Call out: the row appears as `pending` **immediately** — upload returns before
 processing finishes, because a large PDF would otherwise blow past the request
@@ -24,7 +29,12 @@ and a Pricing section. That matters in 90 seconds.
 
 **1:15 — Grounded answer with citations (60s)**
 
-New conversation → *"What services does Acme Cloud Platform offer?"*
+New chat → *"What services does Acme Cloud Platform offer?"*
+
+As the answer lands, note the left panel: the thread just named itself from the
+question and stamped the time. Worth a beat — clicking "New chat" alone doesn't
+create anything; the conversation is only saved once you actually send something,
+so the history never fills up with empty untitled rows.
 
 Point out tokens streaming in, then expand a citation chip to show the exact source
 chunk the answer came from — not a filename, the actual text.
