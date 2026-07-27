@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -23,20 +23,56 @@ def _get_conversation(conversation_id: str, db: Session) -> Conversation:
     return conversation
 
 
+def _to_out(conversation: Conversation, last_at, message_count: int) -> ConversationOut:
+    return ConversationOut(
+        id=conversation.id,
+        title=conversation.title,
+        created_at=conversation.created_at,
+        last_message_at=last_at,
+        message_count=message_count,
+    )
+
+
 @router.post("/conversations", response_model=ConversationOut, status_code=201)
 def create_conversation(
     payload: ConversationCreate | None = None, db: Session = Depends(get_db)
-) -> Conversation:
+) -> ConversationOut:
     conversation = Conversation(title=payload.title if payload else None)
     db.add(conversation)
     db.commit()
     db.refresh(conversation)
-    return conversation
+    # A brand-new thread has no activity yet, so it reads as active at creation.
+    return _to_out(conversation, conversation.created_at, 0)
 
 
 @router.get("/conversations", response_model=list[ConversationOut])
-def list_conversations(db: Session = Depends(get_db)) -> list[Conversation]:
-    return list(db.scalars(select(Conversation).order_by(Conversation.created_at.desc())))
+def list_conversations(db: Session = Depends(get_db)) -> list[ConversationOut]:
+    """History ordered by real activity, not creation time.
+
+    A thread you replied to an hour ago belongs above one you opened last week, so the
+    sidebar sorts on the newest message and falls back to created_at for empty threads.
+    """
+    last_message_at = func.max(Message.created_at)
+    rows = db.execute(
+        select(
+            Conversation,
+            func.coalesce(last_message_at, Conversation.created_at).label("last_message_at"),
+            func.count(Message.id).label("message_count"),
+        )
+        .outerjoin(Message, Message.conversation_id == Conversation.id)
+        .group_by(Conversation.id)
+        .order_by(func.coalesce(last_message_at, Conversation.created_at).desc())
+    ).all()
+
+    return [_to_out(conversation, last_at, count) for conversation, last_at, count in rows]
+
+
+@router.delete("/conversations/{conversation_id}", status_code=204)
+def delete_conversation(conversation_id: str, db: Session = Depends(get_db)) -> Response:
+    # Messages go with it via cascade="all, delete-orphan" on the relationship.
+    db.delete(_get_conversation(conversation_id, db))
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageOut])

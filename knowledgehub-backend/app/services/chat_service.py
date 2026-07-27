@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.db import SessionLocal
-from app.models.orm import Message
+from app.models.orm import Conversation, Message
 from app.services.condensation_service import condense
 from app.services.llm_service import stream_grounded_answer
 from app.services.retrieval_service import (
@@ -35,9 +35,36 @@ def _load_history(db: Session, conversation_id: str) -> list[Message]:
     return list(reversed(recent))
 
 
+TITLE_MAX_CHARS = 60
+
+
+def derive_title(content: str) -> str:
+    """Condense a first message into a sidebar-sized conversation name.
+
+    Deliberately not an LLM call: titling every new conversation would add a round
+    trip and a failure mode to the hot path for something a truncation handles fine.
+    """
+    collapsed = " ".join(content.split())
+    if len(collapsed) <= TITLE_MAX_CHARS:
+        return collapsed
+
+    clipped = collapsed[:TITLE_MAX_CHARS]
+    # Prefer a word boundary, but only if it doesn't leave a stub.
+    if " " in clipped[TITLE_MAX_CHARS // 2 :]:
+        clipped = clipped[: clipped.rindex(" ")]
+    return clipped.rstrip(" ,.;:") + "…"
+
+
 def _persist_user_message(db: Session, conversation_id: str, content: str) -> Message:
     message = Message(conversation_id=conversation_id, role="user", content=content)
     db.add(message)
+
+    # The first user message names the conversation. Later messages never rename it —
+    # a thread that renamed itself on every turn would be unfindable in the sidebar.
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is not None and not conversation.title:
+        conversation.title = derive_title(content)
+
     db.commit()
     db.refresh(message)
     return message

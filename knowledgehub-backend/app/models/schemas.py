@@ -45,6 +45,10 @@ class ConversationOut(BaseModel):
     id: str
     title: str | None = None
     created_at: datetime
+    # Derived per-request rather than stored: create_all() cannot add columns to an
+    # existing SQLite file, and this project ships without migrations by design.
+    last_message_at: datetime
+    message_count: int = 0
 
 
 class MessageCreate(BaseModel):
