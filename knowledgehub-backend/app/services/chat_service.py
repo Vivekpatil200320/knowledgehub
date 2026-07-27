@@ -59,7 +59,12 @@ def _persist_assistant_message(
 
 
 async def _prepare_turn(db: Session, conversation_id: str, content: str) -> tuple[str, list[dict]]:
-    """Persist the user turn, condense against history, retrieve. Returns (condensed_query, chunks)."""
+    """Persist the user turn, condense against history, retrieve. Returns (condensed_query, chunks).
+
+    The condensed query — not the raw message — is what gets generated against: the generation
+    call receives no conversation history, so a context-dependent phrasing like "and what about
+    Zenith?" reads as unanswerable to it even when the right chunks were retrieved.
+    """
     history = _load_history(db, conversation_id)
     _persist_user_message(db, conversation_id, content)
 
@@ -76,7 +81,7 @@ def answer_message(db: Session, conversation_id: str, content: str) -> Message:
         if not chunks:
             return REFUSAL_MESSAGE, [], condensed_query
 
-        parts = [token async for token in stream_grounded_answer(content, chunks)]
+        parts = [token async for token in stream_grounded_answer(condensed_query, chunks)]
         return "".join(parts), to_citations(chunks), condensed_query
 
     answer, citations, condensed_query = asyncio.run(_run())
@@ -106,7 +111,7 @@ async def stream_answer(conversation_id: str, content: str) -> AsyncGenerator[st
             return
 
         parts: list[str] = []
-        async for token in stream_grounded_answer(content, chunks):
+        async for token in stream_grounded_answer(condensed_query, chunks):
             parts.append(token)
             yield _sse("token", token)
 
