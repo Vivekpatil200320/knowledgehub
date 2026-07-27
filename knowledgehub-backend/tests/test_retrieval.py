@@ -68,3 +68,41 @@ def test_format_history_labels_roles():
     history = [FakeMessage("user", "Tell me about X"), FakeMessage("assistant", "X is a thing")]
 
     assert format_history(history) == "User: Tell me about X\nAssistant: X is a thing"
+
+
+def test_ensure_collection_tolerates_concurrent_creation(monkeypatch):
+    """Parallel ingestion tasks race to create the collection; the loser's 409 is fine."""
+    from app.services import vector_store
+
+    calls = {"exists": 0}
+
+    class RacingClient:
+        def collection_exists(self, name):
+            calls["exists"] += 1
+            # Absent on the pre-check, present by the time creation fails.
+            return calls["exists"] > 1
+
+        def create_collection(self, **kwargs):
+            raise RuntimeError("409 Collection already exists")
+
+    monkeypatch.setattr(vector_store, "get_client", lambda: RacingClient())
+
+    vector_store.ensure_collection(2048)  # must not raise
+
+
+def test_ensure_collection_reraises_real_failures(monkeypatch):
+    from app.services import vector_store
+
+    class BrokenClient:
+        def collection_exists(self, name):
+            return False
+
+        def create_collection(self, **kwargs):
+            raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(vector_store, "get_client", lambda: BrokenClient())
+
+    import pytest
+
+    with pytest.raises(RuntimeError, match="connection refused"):
+        vector_store.ensure_collection(2048)

@@ -132,6 +132,15 @@ and returns `pending` immediately; the task advances the row through `processing
 `ready`/`failed` and the UI polls. A 200-page PDF would otherwise block the request past any
 sane timeout. Partial vectors are cleaned up on failure so a retry can't double-write.
 
+Concurrent ingestion made this racy in a way that only reproduced on a *completely empty*
+vector store: two documents uploaded together both checked for the Qdrant collection, both
+found it missing, and both tried to create it — the loser got a 409 and its document went
+`failed`. Since that state only exists on a reviewer's very first run, it survived every
+test until the stack was torn down with `docker compose down -v` and rebuilt from nothing.
+Collection creation now treats "already exists" as success and re-raises anything else.
+Worth stating plainly: the eval suite caught this, having passed 6/6 minutes earlier against
+a warm store.
+
 **Condensation is skipped on the first turn.** With no history there is nothing to resolve, so
 the LLM call is skipped entirely rather than made and discarded.
 

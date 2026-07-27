@@ -26,12 +26,23 @@ def get_client() -> QdrantClient:
 
 
 def ensure_collection(vector_size: int) -> None:
+    """Create the collection if absent.
+
+    Concurrent ingestion tasks can both observe an empty store and race to create it;
+    the loser gets a 409, which is a success condition here.
+    """
     client = get_client()
-    if not client.collection_exists(settings.qdrant_collection):
+    if client.collection_exists(settings.qdrant_collection):
+        return
+
+    try:
         client.create_collection(
             collection_name=settings.qdrant_collection,
             vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
         )
+    except Exception:
+        if not client.collection_exists(settings.qdrant_collection):
+            raise
 
 
 def store_chunks(chunks: list[dict], embeddings: list[list[float]]) -> None:

@@ -13,8 +13,8 @@
       "retrieval_hit": true,
       "faithful": true,
       "passed": true,
-      "latency_s": 1.39,
-      "answer": "Acme Cloud Platform offers three services: \n\n- **Acme Run** \n- **Acme Queue** \n- **Acme Vault**",
+      "latency_s": 1.23,
+      "answer": "Acme Cloud Platform offers three services: \n\n1. **Acme Run** \n2. **Acme Queue** \n3. **Acme Vault**",
       "cited_files": [
         "acme-cloud-platform.md"
       ]
@@ -28,7 +28,7 @@
       "retrieval_hit": true,
       "faithful": true,
       "passed": true,
-      "latency_s": 1.33,
+      "latency_s": 1.09,
       "answer": "Acme Run guarantees 99.95% monthly uptime.",
       "cited_files": [
         "acme-cloud-platform.md"
@@ -43,7 +43,7 @@
       "retrieval_hit": true,
       "faithful": true,
       "passed": true,
-      "latency_s": 1.08,
+      "latency_s": 1.14,
       "answer": "Zenith Explore supports Snowflake, BigQuery, and Postgres.",
       "cited_files": [
         "zenith-analytics-suite.md"
@@ -59,7 +59,7 @@
       "retrieval_hit": true,
       "faithful": true,
       "passed": true,
-      "latency_s": 4.67,
+      "latency_s": 4.84,
       "answer": "Acme Cloud Platform is billed monthly on a per-service basis. \n\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n\nAnnual prepayment reduces the total bill by 15%. There are no charges for data transfer between services inside the same region.",
       "cited_files": [
         "acme-cloud-platform.md"
@@ -75,8 +75,8 @@
       "retrieval_hit": true,
       "faithful": true,
       "passed": true,
-      "latency_s": 4.0,
-      "answer": "Zenith Analytics Suite is licensed per seat, not per query. \n\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- Non-profit organisations receive a 40% discount on all seats.",
+      "latency_s": 4.79,
+      "answer": "Zenith Analytics Suite is licensed per seat, not per query. \n\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- Non-profit organisations receive a 40% discount on all seats.\n- A 30-day trial is available with all features unlocked.",
       "cited_files": [
         "zenith-analytics-suite.md"
       ]
@@ -90,7 +90,7 @@
       "retrieval_hit": null,
       "faithful": true,
       "passed": true,
-      "latency_s": 0.66,
+      "latency_s": 0.64,
       "answer": "I couldn't find anything in the uploaded documents that answers that. Try rephrasing, or upload a document that covers it.",
       "cited_files": []
     }
