@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -12,7 +14,14 @@ from app.core.db import init_db
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("knowledgehub")
 
-app = FastAPI(title="KnowledgeHub API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    init_db()
+    logger.info("Database initialised")
+    yield
+
+
+app = FastAPI(title="KnowledgeHub API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,12 +34,6 @@ app.add_middleware(
 
 app.include_router(documents.router, prefix="/api")
 app.include_router(conversations.router, prefix="/api")
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    init_db()
-    logger.info("Database initialised")
 
 
 @app.exception_handler(RequestValidationError)

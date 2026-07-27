@@ -1,0 +1,98 @@
+{
+  "retrieval_precision": 1.0,
+  "faithfulness": 1.0,
+  "passed": 6,
+  "total": 6,
+  "cases": [
+    {
+      "case": "single-turn: services",
+      "turns": [
+        "What services does Acme Cloud Platform offer?"
+      ],
+      "condensed_query": "What services does Acme Cloud Platform offer?",
+      "retrieval_hit": true,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 2.36,
+      "answer": "Acme Cloud Platform offers three services:\n\n- **Acme Run** \u2014 deploys a container image and scales it automatically based on incoming request volume.\n- **Acme Queue** \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n- **Acme Vault** \u2014 encrypted secret storage with automatic key rotation every 90 days.",
+      "cited_files": [
+        "acme-cloud-platform.md"
+      ]
+    },
+    {
+      "case": "single-turn: specific figure",
+      "turns": [
+        "What uptime does Acme Run guarantee?"
+      ],
+      "condensed_query": "What uptime does Acme Run guarantee?",
+      "retrieval_hit": true,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 1.1,
+      "answer": "Acme Run guarantees 99.95% monthly uptime.",
+      "cited_files": [
+        "acme-cloud-platform.md"
+      ]
+    },
+    {
+      "case": "single-turn: second document",
+      "turns": [
+        "Which warehouses does Zenith Explore support?"
+      ],
+      "condensed_query": "Which warehouses does Zenith Explore support?",
+      "retrieval_hit": true,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 2.25,
+      "answer": "Zenith Explore supports Snowflake, BigQuery, and Postgres.",
+      "cited_files": [
+        "zenith-analytics-suite.md"
+      ]
+    },
+    {
+      "case": "follow-up: bare pronoun-style follow-up",
+      "turns": [
+        "What services does Acme Cloud Platform offer?",
+        "What about pricing?"
+      ],
+      "condensed_query": "What is the pricing of Acme Cloud Platform?",
+      "retrieval_hit": true,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 6.96,
+      "answer": "Acme Cloud Platform is billed monthly on a per-service basis. \n\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n\nAnnual prepayment reduces the total bill by 15%. There are no charges for data transfer between services inside the same region.",
+      "cited_files": [
+        "acme-cloud-platform.md"
+      ]
+    },
+    {
+      "case": "follow-up: topic switch to the other document",
+      "turns": [
+        "What services does Acme Cloud Platform offer?",
+        "And what about Zenith? How much is it?"
+      ],
+      "condensed_query": "What is the pricing of Zenith?",
+      "retrieval_hit": true,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 3.74,
+      "answer": "Zenith Analytics Suite is licensed per seat, not per query. \n\n- Zenith Explore costs $45 per analyst seat per month.\n- Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- There is a 30-day trial available with all features unlocked.\n- Non-profit organisations receive a 40% discount on all seats.",
+      "cited_files": [
+        "zenith-analytics-suite.md"
+      ]
+    },
+    {
+      "case": "refusal: out of corpus",
+      "turns": [
+        "What is the capital of France?"
+      ],
+      "condensed_query": "What is the capital of France?",
+      "retrieval_hit": null,
+      "faithful": true,
+      "passed": true,
+      "latency_s": 1.1,
+      "answer": "I couldn't find anything in the uploaded documents that answers that. Try rephrasing, or upload a document that covers it.",
+      "cited_files": []
+    }
+  ]
+}
