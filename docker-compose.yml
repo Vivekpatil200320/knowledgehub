@@ -1,0 +1,43 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  backend:
+    build: ./knowledgehub-backend
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-nvidia}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:?set NVIDIA_API_KEY in .env}
+      NVIDIA_LLM_MODEL: ${NVIDIA_LLM_MODEL:-meta/llama-3.1-8b-instruct}
+      NVIDIA_EMBEDDING_MODEL: ${NVIDIA_EMBEDDING_MODEL:-nvidia/llama-nemotron-embed-1b-v2}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-knowledgehub_documents}
+      DATABASE_URL: sqlite:////app/data/knowledgehub.db
+      UPLOAD_DIR: /app/uploads
+      CORS_ORIGINS: http://localhost:3000
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
+    depends_on:
+      - qdrant
+
+  frontend:
+    build:
+      context: ./knowledgehub-frontend
+      # NEXT_PUBLIC_* is inlined at build time, so it has to arrive as a build arg.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  qdrant_storage:
+  backend_data:
+  backend_uploads:
