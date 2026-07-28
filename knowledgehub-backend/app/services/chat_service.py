@@ -15,6 +15,7 @@ from app.services.llm_service import stream_grounded_answer
 from app.services.retrieval_service import (
     narrative_order,
     retrieve,
+    select_citations,
     select_context,
     to_citations,
 )
@@ -206,7 +207,7 @@ def answer_message(db: Session, conversation_id: str, content: str) -> Message:
                 condensed_query, narrative_order(chunks), available_documents
             )
         ]
-        return "".join(parts), to_citations(chunks), condensed_query
+        return "".join(parts), to_citations(select_citations(chunks)), condensed_query
 
     answer, citations, condensed_query = asyncio.run(_run())
     return _persist_assistant_message(
@@ -253,7 +254,7 @@ async def stream_answer(conversation_id: str, content: str) -> AsyncGenerator[st
             parts.append(token)
             yield _sse("token", token)
 
-        citations = to_citations(chunks)
+        citations = to_citations(select_citations(chunks))
         _persist_assistant_message(
             db, conversation_id, "".join(parts), citations, condensed_query
         )

@@ -55,6 +55,29 @@ def select_context(chunks: list[dict]) -> list[dict]:
     return [c for c in chunks if c["score"] >= settings.context_score_floor]
 
 
+def select_citations(chunks: list[dict]) -> list[dict]:
+    """Narrow what's SHOWN as a source, separately from what's READ for generation.
+
+    `select_context`'s floor is deliberately permissive — it has to be, to keep a
+    resume's low-scoring education section in the model's context. But that same
+    permissiveness means an unrelated document's noise (something that merely cleared
+    the floor, not something actually relevant) rides along into the context window,
+    and showing it as a citation is what erodes trust: a pricing answer citing an
+    unrelated resume looks like a bug even when the pricing answer itself is correct.
+
+    `chunks` must already be score-descending (the contract `select_context`'s callers
+    rely on) so `chunks[0]` is the top hit; relative to that hit, not an absolute
+    value, because "relevant" is corpus- and query-dependent — a fixed cutoff can't
+    separate the two cases at once, only where a chunk lands relative to the best
+    match for this specific question can.
+    """
+    if not chunks:
+        return []
+    top_score = chunks[0]["score"]
+    cutoff = top_score * settings.citation_relative_floor
+    return [c for c in chunks if c["score"] >= cutoff]
+
+
 def narrative_order(chunks: list[dict]) -> list[dict]:
     """Reorder context back into document reading order before generation.
 

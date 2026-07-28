@@ -38,6 +38,7 @@ def test_split_text_tags_chunks_with_document_metadata():
 def thresholds(monkeypatch):
     monkeypatch.setattr(retrieval_service.settings, "refusal_score_threshold", 0.20)
     monkeypatch.setattr(retrieval_service.settings, "context_score_floor", 0.05)
+    monkeypatch.setattr(retrieval_service.settings, "citation_relative_floor", 0.5)
 
 
 def test_weak_top_hit_refuses_everything():
@@ -64,6 +65,56 @@ def test_noise_below_the_floor_is_still_excluded():
 
 def test_no_hits_at_all_refuses():
     assert retrieval_service.select_context([]) == []
+
+
+# --- select_citations --------------------------------------------------------
+# select_context decides what the MODEL reads; select_citations decides what's
+# shown as a "Source" chip. They're deliberately different bars: reusing
+# select_context's floor here is the bug this guards against — an unrelated
+# document's noise clears that floor easily, and citing it (correctly-answered
+# question or not) reads as "why does this cite my resume?" to a user.
+
+
+def test_noise_from_an_unrelated_document_is_not_cited():
+    """Modelled on a live case: a correct answer at 0.52, unrelated-document noise
+    at 0.13-0.18 (25-35% of the top hit) riding along because it cleared the much
+    more permissive context floor."""
+    kept = retrieval_service.select_citations(
+        [
+            chunk(0.522, filename="correct-doc.md"),
+            chunk(0.182, filename="unrelated-resume.pdf"),
+            chunk(0.169, filename="unrelated-resume.pdf", index=1),
+            chunk(0.130, filename="another-unrelated.md"),
+        ]
+    )
+
+    assert [c["metadata"]["filename"] for c in kept] == ["correct-doc.md"]
+
+
+def test_a_same_document_supporting_chunk_is_still_cited():
+    """The other side of the same coin: a second chunk from the SAME document,
+    scoring close to the top hit, must not be discarded — this is genuine
+    supporting evidence, not noise. Modelled on live same-document ratios of
+    0.68-0.94 observed across real corpus queries."""
+    kept = retrieval_service.select_citations(
+        [chunk(0.544, filename="doc.md", index=0), chunk(0.391, filename="doc.md", index=1)]
+    )
+
+    assert len(kept) == 2
+
+
+def test_citation_floor_is_relative_not_absolute():
+    """The same absolute score (0.15) must be kept or dropped depending on what the
+    top hit was for that question — "relevant" is query-dependent, not a fixed number."""
+    weak_top = retrieval_service.select_citations([chunk(0.20), chunk(0.15)])
+    strong_top = retrieval_service.select_citations([chunk(0.50), chunk(0.15)])
+
+    assert len(weak_top) == 2  # 0.15 is 75% of 0.20 -> kept
+    assert len(strong_top) == 1  # 0.15 is 30% of 0.50 -> dropped; only the top hit remains
+
+
+def test_select_citations_on_empty_input():
+    assert retrieval_service.select_citations([]) == []
 
 
 def test_to_citations_shape():

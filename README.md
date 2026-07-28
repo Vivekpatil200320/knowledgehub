@@ -148,6 +148,24 @@ information it was holding. Refusal is now judged on the **top hit only**
 at the top hit and out-of-corpus 0.024-0.114, so the refusal bar sits in a wide empty gap
 rather than being fitted to a single example.
 
+**A third threshold: what the model reads is not what gets shown as a source.**
+`context_score_floor` is deliberately permissive — that's what keeps a résumé's low-scoring
+education section in the model's context. But that same permissiveness lets an *unrelated*
+document's noise ride along too: asking about Acme's uptime SLA returned a correct answer,
+cited alongside two chunks from an unrelated personal document that had merely cleared the
+floor, not anything actually relevant. A wrong citation reads as a bug even when the visible
+answer text is fully correct — it's arguably worse for trust than a citation-free refusal.
+
+Reusing `context_score_floor` for citations was the bug, not a tuning problem: no single
+absolute cutoff can separate "genuinely relevant" from "technically above the floor" across
+different queries, because relevance is corpus- and query-dependent. `select_citations` judges
+relative to the top hit for *that specific question* instead: measured across live corpus
+queries, a document's own additional supporting chunks scored 0.68-0.94 of the top hit, while
+unrelated-document noise scored 0.20-0.40 — a wide, clean gap. `citation_relative_floor` (0.5)
+sits in the middle of it. Generation still reads the full permissive set via
+`context_score_floor` unchanged — only the citation list is narrowed, so a real supporting fact
+can still shape the answer even on the rare turn its citation chip doesn't appear.
+
 **Duplicate passages are collapsed before they reach the model.** Uploading the same file
 twice is an ordinary thing to do, and it produces two `document_id`s over identical text —
 so top-k fills with the same passage twice, the model re-reads it, the citation list repeats
@@ -334,7 +352,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 96 tests
+cd knowledgehub-backend && pytest        # 100 tests
 ```
 
 ---

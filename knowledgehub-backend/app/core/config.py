@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     # IS answerable still gets its lower-ranked evidence (e.g. the education section
     # of a resume, which scores far below the header block).
     context_score_floor: float = 0.05
+    # What the model READS and what gets shown as a "Source" citation chip are
+    # different questions. A cross-document noise chunk clears context_score_floor
+    # easily enough to be read, but showing it as a source is what erodes user trust —
+    # "why does this pricing answer cite my resume?". Measured on live corpus queries,
+    # a correct document's own supporting chunks score 0.68-0.94 of that query's top
+    # hit; unrelated documents' noise scores 0.20-0.40. 0.5 sits in the middle of that
+    # gap with margin on both sides.
+    citation_relative_floor: float = 0.5
     chat_history_turns: int = 6
 
     cors_origins: str = "http://localhost:3000,http://localhost:3005"

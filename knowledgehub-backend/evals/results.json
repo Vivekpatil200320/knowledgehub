@@ -19,13 +19,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.7,
-      "answer": "- Acme Run guarantees 99.95% monthly uptime.",
+      "latency_s": 0.97,
+      "answer": "- 99.95% monthly uptime.",
       "cited_files": [
-        "acme-cloud-platform.md",
-        "resume-ai.pdf",
-        "resume-swe.pdf",
-        "zenith-analytics-suite.md"
+        "acme-cloud-platform.md"
       ]
     },
     {
@@ -42,13 +39,9 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.16,
-      "answer": "- Snowflake\n- BigQuery\n- Postgres",
+      "latency_s": 1.03,
+      "answer": "- Zenith Explore supports Snowflake, BigQuery, and Postgres.",
       "cited_files": [
-        "acme-cloud-platform.md",
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -66,12 +59,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 2.06,
-      "answer": "- Acme Run \u2014 a service that deploys a container image and scales it automatically based on incoming request volume, with cold start latency typically under 400ms.\n- Acme Queue \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n- Acme Vault \u2014 encrypted secret storage with automatic key rotation every 90 days.",
+      "latency_s": 3.49,
+      "answer": "- Acme Cloud Platform offers three services:\n  - **Acme Run** \u2014 deploys a container image and scales it automatically based on incoming request volume.\n  - **Acme Queue** \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n  - **Acme Vault** \u2014 encrypted secret storage with automatic key rotation every 90 days.",
       "cited_files": [
-        "acme-cloud-platform.md",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "acme-cloud-platform.md"
       ]
     },
     {
@@ -88,12 +79,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.44,
-      "answer": "- Senior Backend Engineer, Meridian Freight (2023 - present)\n  - Rebuilt the shipment-tracking pipeline on Kafka, cutting event lag from 40 seconds to under 2.\n  - Led the migration of the pricing service to Go, and introduced contract tests that dropped production incidents by roughly a third.",
+      "latency_s": 1.18,
+      "answer": "- Senior Backend Engineer, Meridian Freight\n  - Location: Austin, TX\n  - Dates: 2023 - present",
       "cited_files": [
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "candidate-profile.pdf"
       ]
     },
     {
@@ -110,12 +99,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.58,
-      "answer": "- Master of Science in Computer Science from Ashford Institute of Technology in Boston, with a GPA of 3.8/4.0.\n- Bachelor of Engineering in Information Technology from Westbrook University in Portland, with a GPA of 3.6/4.0.",
+      "latency_s": 1.77,
+      "answer": "- Master of Science in Computer Science\n  - From Ashford Institute of Technology, Boston\n  - GPA 3.8/4.0\n  - Completed from 2018 to 2020\n- Bachelor of Engineering in Information Technology\n  - From Westbrook University, Portland\n  - GPA 3.6/4.0\n  - Completed from 2014 to 2018",
       "cited_files": [
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "candidate-profile.pdf"
       ]
     },
     {
@@ -132,12 +119,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 5.94,
-      "answer": "- Priya Nair is a candidate with a profile that includes:\n  - Contact information: priya.nair@example.com, +1-555-0142, Austin, TX, github.com/example\n  - Summary: Backend engineer focused on data platforms and search, owning services end to end.\n  - Skills: \n    - Languages: Python, Go, SQL\n    - Data: PostgreSQL, Kafka, Qdrant, dbt\n    - Infra: Docker, Kubernetes, Terraform, AWS\n  - Experience:\n    - Senior Backend Engineer, Meridian Freight (2023 - present)\n      - Rebuilt the shipment-tracking pipeline on Kafka, cutting event lag from 40 seconds to under 2.\n      - Led the migration of the pricing service to Go, and introduced contract tests that dropped production incidents by roughly a third.\n    - Backend Engineer, Cobalt Health (2020 - 2023)\n      - Built the patient-records search API on PostgreSQL full-text search, later adding a vector layer for semantic lookup.\n      - Owned the service's SLO and on-call rotation, and mentored two junior engineers through their first production launches.\n    - Software Engineer, Lantern Analytics (2018 - 2020)\n      - Wrote ETL jobs in Python feeding a reporting warehouse, and built an internal dashboard used daily by the operations team to track pipeline freshness.\n  - Education:\n    - Master of Science in Computer Science, Ashford Institute of Technology, Boston (2018 - 2020), GPA 3.8/4.0\n    - Bachelor of Engineering in Information Technology, Westbrook University, Portland (2014 - 2018), GPA 3.6/4.0\n  - Certifications:\n    - AWS Certified Solutions Architect - Associate (2022)\n    - Certified Kubernetes Administrator (2023)",
+      "latency_s": 3.52,
+      "answer": "- Priya Nair is the candidate's name.\n- She is a Backend engineer focused on data platforms and search.\n- Her skills include languages such as Python, Go, and SQL, data platforms like PostgreSQL, Kafka, and Qdrant, and infrastructure like Docker, Kubernetes, and Terraform.\n- She has experience as a Senior Backend Engineer at Meridian Freight, where she rebuilt the shipment-tracking pipeline on Kafka, and as a Backend Engineer at Cobalt Health, where she built the patient-records search API on PostgreSQL full-text search.\n- Her education includes a Master of Science in Computer Science from Ashford Institute of Technology and a Bachelor of Engineering in Information Technology from Westbrook University.\n- She holds certifications such as AWS Certified Solutions Architect - Associate and Certified Kubernetes Administrator.\n- She has a GitHub profile at github.com/example.",
       "cited_files": [
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "candidate-profile.pdf"
       ]
     },
     {
@@ -154,12 +139,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.26,
+      "latency_s": 1.78,
       "answer": "- Python\n- Go\n- SQL",
       "cited_files": [
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "candidate-profile.pdf"
       ]
     },
     {
@@ -177,12 +160,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 4.08,
-      "answer": "- Acme Cloud Platform is billed monthly on a per-service basis.\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory.\n  The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages\n  each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n- Annual prepayment reduces the total bill by 15%. There are no charges for data\n  transfer between services inside the same region.",
+      "latency_s": 4.64,
+      "answer": "- Acme Cloud Platform is billed monthly on a per-service basis.\n- The pricing for each service is as follows:\n  - Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n  - Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n  - Acme Vault costs $0.03 per secret per month, with no free tier.\n- Annual prepayment reduces the total bill by 15%.\n- There are no charges for data transfer between services inside the same region.\n- The support tiers for Acme Cloud Platform are:\n  - Basic support is included at no cost and answers within two business days.\n  - Standard support costs $99 per month and answers within four business hours.\n  - Enterprise support costs $2,500 per month and provides a dedicated technical account manager with a 30-minute response target.",
       "cited_files": [
-        "acme-cloud-platform.md",
-        "resume-ai.pdf",
-        "zenith-analytics-suite.md"
+        "acme-cloud-platform.md"
       ]
     },
     {
@@ -200,11 +181,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 4.07,
-      "answer": "- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- There is no free tier, but a 30-day trial is available with all features unlocked.\n- Non-profit organisations receive a 40% discount on all seats.",
+      "latency_s": 3.58,
+      "answer": "- Zenith Analytics Suite is licensed per seat, not per query.\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- There is no free tier. A 30-day trial is available with all features unlocked.\n- Non-profit organisations receive a 40% discount on all seats.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "resume-ai.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -223,12 +203,10 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 12.54,
-      "answer": "- Master of Science in Computer Science at Ashford Institute of Technology, Boston.\n  - Duration: 2018 to 2020.\n  - GPA: 3.8/4.0.\n- Bachelor of Engineering in Information Technology at Westbrook University, Portland.\n  - Duration: 2014 to 2018.\n  - GPA: 3.6/4.0.",
+      "latency_s": 5.18,
+      "answer": "- Master of Science in Computer Science at Ashford Institute of Technology in Boston.\n- Bachelor of Engineering in Information Technology at Westbrook University in Portland.",
       "cited_files": [
-        "candidate-profile.pdf",
-        "resume-ai.pdf",
-        "resume-swe.pdf"
+        "candidate-profile.pdf"
       ]
     },
     {
@@ -245,7 +223,7 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 0.52,
+      "latency_s": 0.69,
       "answer": "I couldn't find anything in the uploaded documents that answers that. Try rephrasing, or upload a document that covers it.",
       "cited_files": []
     }
