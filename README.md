@@ -185,6 +185,27 @@ a warm store.
 **Condensation is skipped on the first turn.** With no history there is nothing to resolve, so
 the LLM call is skipped entirely rather than made and discarded.
 
+**"List my documents" is not a content question, and retrieval was never going to answer
+it correctly.** Asking "list names of all uploaded documents" retrieved whatever chunks scored
+least-badly — real pricing tables, course names, SLA text — and the model, given irrelevant
+context and no signal its job here was impossible, recited them as if they *were* a document
+listing, with citations attached. This slipped past the two-layer refusal guard entirely: it
+guards against *nothing relevant retrieved*, but this case retrieved *something*, just nothing
+that answers the actual question. There is no chunk whose content is "the list of files" —
+the question isn't answerable from retrieval at all, by construction.
+
+Fixed with the same two-layer pattern used elsewhere in this project: a conservative regex
+(`is_document_listing_question`) short-circuits the unambiguous phrasings — "list documents",
+"how many documents", "names of" — straight to a deterministic answer built from the
+`documents` table, skipping retrieval and generation entirely, so there's no embedding call
+and no way for the model to hallucinate. Deliberately narrow: "which document mentions
+pricing" must *not* match, since that's a real content question needing actual retrieval — the
+classifier is tested against that exact phrasing to guard against the false positive.
+Everything the regex doesn't catch falls back to a second layer: the generation prompt now
+always receives a ground-truth `AVAILABLE DOCUMENTS` list alongside `CONTEXT`, with an explicit
+rule that context excerpts are never a document listing — a broader, less precise safety net
+for phrasings the first layer misses.
+
 ---
 
 ## Evaluation
@@ -313,7 +334,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 81 tests
+cd knowledgehub-backend && pytest        # 96 tests
 ```
 
 ---

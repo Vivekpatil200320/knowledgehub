@@ -7,8 +7,12 @@ from app.core.config import settings
 
 GROUNDED_PROMPT_TEMPLATE = """You are a document assistant. Answer the question using ONLY the context provided below.
 
+AVAILABLE DOCUMENTS (the complete, authoritative list of everything uploaded):
+{available_documents}
+
 Rules:
 - Never use knowledge from outside the context. If the context does not answer the question, say so explicitly rather than guessing.
+- AVAILABLE DOCUMENTS above is the only correct answer to questions about which documents exist, their names, or how many there are. CONTEXT below is excerpts from INSIDE those documents, not a listing of them — never present a CONTEXT excerpt as if it were a document name or a document listing.
 - The context may refer to the subject by a longer or slightly different name than the question uses (for example "Widget" vs "Widget Pro Suite"). Treat an obvious name variant as the same subject and answer from it.
 - Be complete. Gather every detail in the context that bears on the question and include all of it — specific names, figures, dates and qualifiers. A one-line answer when the context supports a fuller one is a bad answer.
 - Relevant details are often spread across several context sections rather than sitting in one place. Read all of them before answering.
@@ -80,14 +84,22 @@ async def complete(prompt: str, temperature: float = 0.2) -> str:
     return "".join(parts)
 
 
-async def stream_grounded_answer(question: str, chunks: list[dict]) -> AsyncGenerator[str, None]:
+async def stream_grounded_answer(
+    question: str, chunks: list[dict], available_documents: list[str] | None = None
+) -> AsyncGenerator[str, None]:
     prompt = GROUNDED_PROMPT_TEMPLATE.format(
-        context=build_context(chunks), question=question
+        context=build_context(chunks),
+        question=question,
+        available_documents=", ".join(available_documents) if available_documents else "(none)",
     )
     async for token in stream_completion(prompt):
         yield token
 
 
-async def generate_grounded_answer(question: str, chunks: list[dict]) -> str:
-    parts = [token async for token in stream_grounded_answer(question, chunks)]
+async def generate_grounded_answer(
+    question: str, chunks: list[dict], available_documents: list[str] | None = None
+) -> str:
+    parts = [
+        token async for token in stream_grounded_answer(question, chunks, available_documents)
+    ]
     return "".join(parts)

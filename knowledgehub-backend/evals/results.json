@@ -19,10 +19,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.19,
-      "answer": "\u2022 Acme Run guarantees 99.95% monthly uptime.",
+      "latency_s": 1.7,
+      "answer": "- Acme Run guarantees 99.95% monthly uptime.",
       "cited_files": [
         "acme-cloud-platform.md",
+        "resume-ai.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -40,11 +42,13 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.96,
-      "answer": "\u2022 Snowflake\n\u2022 BigQuery\n\u2022 Postgres",
+      "latency_s": 1.16,
+      "answer": "- Snowflake\n- BigQuery\n- Postgres",
       "cited_files": [
         "acme-cloud-platform.md",
         "candidate-profile.pdf",
+        "resume-ai.pdf",
+        "resume-swe.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -62,12 +66,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 2.41,
-      "answer": "Acme Cloud Platform offers three services:\n\n\u2022 **Acme Run** \u2014 deploys a container image and scales it automatically based on incoming request volume.\n\u2022 **Acme Queue** \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n\u2022 **Acme Vault** \u2014 encrypted secret storage with automatic key rotation every 90 days.",
+      "latency_s": 2.06,
+      "answer": "- Acme Run \u2014 a service that deploys a container image and scales it automatically based on incoming request volume, with cold start latency typically under 400ms.\n- Acme Queue \u2014 a managed message queue with at-least-once delivery guarantees and a maximum message retention window of 14 days.\n- Acme Vault \u2014 encrypted secret storage with automatic key rotation every 90 days.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
-        "zenith-analytics-suite.md"
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -84,10 +88,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.39,
-      "answer": "Priya Nair currently works as a Senior Backend Engineer at Meridian Freight.",
+      "latency_s": 1.44,
+      "answer": "- Senior Backend Engineer, Meridian Freight (2023 - present)\n  - Rebuilt the shipment-tracking pipeline on Kafka, cutting event lag from 40 seconds to under 2.\n  - Led the migration of the pricing service to Go, and introduced contract tests that dropped production incidents by roughly a third.",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -104,10 +110,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 2.52,
-      "answer": "Priya Nair's degrees are:\n\n\u2022 Master of Science in Computer Science from Ashford Institute of Technology, Boston (2018-2020, GPA 3.8/4.0)\n\u2022 Bachelor of Engineering in Information Technology from Westbrook University, Portland (2014-2018, GPA 3.6/4.0)",
+      "latency_s": 1.58,
+      "answer": "- Master of Science in Computer Science from Ashford Institute of Technology in Boston, with a GPA of 3.8/4.0.\n- Bachelor of Engineering in Information Technology from Westbrook University in Portland, with a GPA of 3.6/4.0.",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -124,12 +132,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 7.22,
-      "answer": "Priya Nair is a backend engineer with experience in data platforms and search. Key details about her profile include:\n\n- **Contact Information:** priya.nair@example.com, +1-555-0142, Austin, TX, github.com/example\n- **Summary:** Backend engineer with expertise in data platforms and search, owning services end-to-end from schema design through deployment and on-call.\n- **Skills:**\n  \u2022 Languages: Python, Go, SQL\n  \u2022 Data: PostgreSQL, Kafka, Qdrant, dbt\n  \u2022 Infra: Docker, Kubernetes, Terraform, AWS\n- **Experience:**\n  \u2022 Senior Backend Engineer, Meridian Freight (2023 - present)\n    - Rebuilt the shipment-tracking pipeline on Kafka, reducing event lag from 40 seconds to under 2 seconds\n    - Led the migration of the pricing service to Go, introducing contract tests that decreased production incidents by about a third\n  \u2022 Backend Engineer, Cobalt Health (2020 - 2023)\n    - Built the patient-records search API on PostgreSQL full-text search, later adding a vector layer for semantic lookup\n    - Owned the service's SLO and on-call rotation, mentoring two junior engineers through their first production launches\n  \u2022 Software Engineer, Lantern Analytics (2018 - 2020)\n    - Wrote ETL jobs in Python feeding a reporting warehouse, and built an internal dashboard used daily by the operations team to track pipeline freshness\n- **Education:**\n  \u2022 Master of Science in Computer Science, Ashford Institute of Technology, Boston (2018 - 2020), GPA 3.8/4.0\n  \u2022 Bachelor of Engineering in Information Technology, Westbrook University, Portland (2014 - 2018), GPA 3.6/4.0\n- **Certifications:**\n  \u2022 AWS Certified Solutions Architect - Associate (2022)\n  \u2022 Certified Kubernetes Administrator (2023)",
+      "latency_s": 5.94,
+      "answer": "- Priya Nair is a candidate with a profile that includes:\n  - Contact information: priya.nair@example.com, +1-555-0142, Austin, TX, github.com/example\n  - Summary: Backend engineer focused on data platforms and search, owning services end to end.\n  - Skills: \n    - Languages: Python, Go, SQL\n    - Data: PostgreSQL, Kafka, Qdrant, dbt\n    - Infra: Docker, Kubernetes, Terraform, AWS\n  - Experience:\n    - Senior Backend Engineer, Meridian Freight (2023 - present)\n      - Rebuilt the shipment-tracking pipeline on Kafka, cutting event lag from 40 seconds to under 2.\n      - Led the migration of the pricing service to Go, and introduced contract tests that dropped production incidents by roughly a third.\n    - Backend Engineer, Cobalt Health (2020 - 2023)\n      - Built the patient-records search API on PostgreSQL full-text search, later adding a vector layer for semantic lookup.\n      - Owned the service's SLO and on-call rotation, and mentored two junior engineers through their first production launches.\n    - Software Engineer, Lantern Analytics (2018 - 2020)\n      - Wrote ETL jobs in Python feeding a reporting warehouse, and built an internal dashboard used daily by the operations team to track pipeline freshness.\n  - Education:\n    - Master of Science in Computer Science, Ashford Institute of Technology, Boston (2018 - 2020), GPA 3.8/4.0\n    - Bachelor of Engineering in Information Technology, Westbrook University, Portland (2014 - 2018), GPA 3.6/4.0\n  - Certifications:\n    - AWS Certified Solutions Architect - Associate (2022)\n    - Certified Kubernetes Administrator (2023)",
       "cited_files": [
-        "acme-cloud-platform.md",
         "candidate-profile.pdf",
-        "zenith-analytics-suite.md"
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -146,10 +154,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 1.28,
-      "answer": "\u2022 Python \n\u2022 Go \n\u2022 SQL",
+      "latency_s": 1.26,
+      "answer": "- Python\n- Go\n- SQL",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -167,11 +177,11 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 8.61,
-      "answer": "Acme Cloud Platform is billed monthly on a per-service basis. \n\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory. The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n\nAnnual prepayment reduces the total bill by 15%. There are no charges for data transfer between services inside the same region.\n\nSupport tiers are:\n- Basic support is included at no cost and answers within two business days.\n- Standard support costs $99 per month and answers within four business hours.\n- Enterprise support costs $2,500 per month and provides a dedicated technical account manager with a 30-minute response target.\n\nService level agreements guarantee:\n- Acme Run: 99.95% monthly uptime\n- Acme Queue and Acme Vault: 99.9% monthly uptime. If uptime falls below the guarantee, customers receive service credits equal to 10% of that service's monthly bill.",
+      "latency_s": 4.08,
+      "answer": "- Acme Cloud Platform is billed monthly on a per-service basis.\n- Acme Run costs $0.000024 per vCPU-second plus $0.0000025 per GiB-second of memory.\n  The free tier includes 180,000 vCPU-seconds per month.\n- Acme Queue costs $0.40 per million messages published. The first million messages\n  each month are free.\n- Acme Vault costs $0.03 per secret per month, with no free tier.\n- Annual prepayment reduces the total bill by 15%. There are no charges for data\n  transfer between services inside the same region.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
+        "resume-ai.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -190,11 +200,11 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 6.46,
-      "answer": "Zenith Analytics Suite is licensed per seat, not per query. The pricing for Zenith Analytics Suite is as follows:\n\n- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- There is no free tier. A 30-day trial is available with all features unlocked.\n- Non-profit organisations receive a 40% discount on all seats.",
+      "latency_s": 4.07,
+      "answer": "- Zenith Explore costs $45 per analyst seat per month. Viewer-only accounts are free and unlimited.\n- Zenith Pipeline costs a flat $600 per month regardless of how many jobs run.\n- There is no free tier, but a 30-day trial is available with all features unlocked.\n- Non-profit organisations receive a 40% discount on all seats.",
       "cited_files": [
         "acme-cloud-platform.md",
-        "candidate-profile.pdf",
+        "resume-ai.pdf",
         "zenith-analytics-suite.md"
       ]
     },
@@ -213,10 +223,12 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 6.64,
-      "answer": "Priya Nair studied at the following institutions:\n\n\u2022 Ashford Institute of Technology, Boston (Master of Science in Computer Science, 2018-2020)\n\u2022 Westbrook University, Portland (Bachelor of Engineering in Information Technology, 2014-2018)",
+      "latency_s": 12.54,
+      "answer": "- Master of Science in Computer Science at Ashford Institute of Technology, Boston.\n  - Duration: 2018 to 2020.\n  - GPA: 3.8/4.0.\n- Bachelor of Engineering in Information Technology at Westbrook University, Portland.\n  - Duration: 2014 to 2018.\n  - GPA: 3.6/4.0.",
       "cited_files": [
-        "candidate-profile.pdf"
+        "candidate-profile.pdf",
+        "resume-ai.pdf",
+        "resume-swe.pdf"
       ]
     },
     {
@@ -233,7 +245,7 @@
       "leaked_terms": [],
       "citations_ok": true,
       "passed": true,
-      "latency_s": 0.69,
+      "latency_s": 0.52,
       "answer": "I couldn't find anything in the uploaded documents that answers that. Try rephrasing, or upload a document that covers it.",
       "cited_files": []
     }
