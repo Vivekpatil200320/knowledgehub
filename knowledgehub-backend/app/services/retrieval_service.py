@@ -66,16 +66,30 @@ def select_citations(chunks: list[dict]) -> list[dict]:
     unrelated resume looks like a bug even when the pricing answer itself is correct.
 
     `chunks` must already be score-descending (the contract `select_context`'s callers
-    rely on) so `chunks[0]` is the top hit; relative to that hit, not an absolute
-    value, because "relevant" is corpus- and query-dependent — a fixed cutoff can't
-    separate the two cases at once, only where a chunk lands relative to the best
-    match for this specific question can.
+    rely on) so `chunks[0]` is the top hit. The bar is relative to that hit because
+    "relevant" is corpus- and query-dependent — where a chunk lands relative to the best
+    match for this question separates signal from noise better than any fixed number.
+
+    But a purely relative bar inverts under a weak top hit: half of a low score is a very
+    low bar, so the moment the corpus barely covers the question — when a spurious source
+    is most misleading — the filter opens up instead of tightening. An absolute floor
+    backstops that case, and a supporting chunk must clear both.
+
+    The top hit is exempt from the absolute floor. It has already passed the refusal
+    threshold in `select_context`, so by the time this runs we are definitely answering;
+    applying the floor to it too would let a weak-but-answerable question render an
+    answer with no source at all, which reads as ungrounded — a worse failure than the
+    spurious-citation one this floor exists to fix. Show where the answer came from, and
+    hold everything *else* to a bar that doesn't slacken when the top hit is weak.
     """
     if not chunks:
         return []
     top_score = chunks[0]["score"]
-    cutoff = top_score * settings.citation_relative_floor
-    return [c for c in chunks if c["score"] >= cutoff]
+    cutoff = max(
+        top_score * settings.citation_relative_floor,
+        settings.citation_absolute_floor,
+    )
+    return [chunks[0]] + [c for c in chunks[1:] if c["score"] >= cutoff]
 
 
 def narrative_order(chunks: list[dict]) -> list[dict]:

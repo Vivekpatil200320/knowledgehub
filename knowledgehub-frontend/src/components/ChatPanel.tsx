@@ -115,7 +115,7 @@ export function ChatPanel({
                       key={starter}
                       type="button"
                       onClick={() => onSend(starter)}
-                      className="rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-left text-sm text-text-muted transition-colors duration-150 hover:border-accent hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="rounded border border-border bg-surface-raised px-3 py-2.5 text-left text-sm text-text-muted transition-colors duration-150 hover:border-accent hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {starter}
                     </button>
@@ -187,7 +187,7 @@ export function ChatPanel({
               onClick={submit}
               disabled={!draft.trim() || pending !== null}
               aria-label="Send message"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+              className="grid size-9 shrink-0 place-items-center rounded border border-accent bg-surface text-accent transition-colors duration-150 hover:border-accent-hover hover:bg-accent-soft hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowUp aria-hidden="true" className="size-4" />
             </button>

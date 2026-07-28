@@ -3,7 +3,6 @@ from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 from app.core.config import settings
 
 _embedder: NVIDIAEmbeddings | None = None
-EMBEDDING_DIM = 2048
 
 
 def get_embedder() -> NVIDIAEmbeddings:

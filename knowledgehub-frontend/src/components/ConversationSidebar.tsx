@@ -49,7 +49,7 @@ export function ConversationSidebar({
         <button
           type="button"
           onClick={onNew}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-accent-fg transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
+          className="flex w-full items-center justify-center gap-2 rounded border border-accent bg-surface px-3 py-2.5 text-sm font-medium uppercase tracking-wide text-accent transition-colors duration-150 hover:border-accent-hover hover:bg-accent-soft hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-raised"
         >
           <MessageSquarePlus aria-hidden="true" className="size-4" />
           New chat

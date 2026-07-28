@@ -103,14 +103,28 @@ def test_a_same_document_supporting_chunk_is_still_cited():
     assert len(kept) == 2
 
 
-def test_citation_floor_is_relative_not_absolute():
-    """The same absolute score (0.15) must be kept or dropped depending on what the
-    top hit was for that question — "relevant" is query-dependent, not a fixed number."""
-    weak_top = retrieval_service.select_citations([chunk(0.20), chunk(0.15)])
-    strong_top = retrieval_service.select_citations([chunk(0.50), chunk(0.15)])
+def test_citation_floor_is_relative_for_supporting_chunks():
+    """A supporting chunk's fate is query-dependent: 0.30 is kept under a 0.50 top hit
+    (60%) and dropped under a 0.90 one (33%), because "relevant" is relative to the best
+    match for this question rather than a fixed number. Both are above the absolute
+    floor, so the relative bar is what decides here."""
+    weak_top = retrieval_service.select_citations([chunk(0.50), chunk(0.30)])
+    strong_top = retrieval_service.select_citations([chunk(0.90), chunk(0.30)])
 
-    assert len(weak_top) == 2  # 0.15 is 75% of 0.20 -> kept
-    assert len(strong_top) == 1  # 0.15 is 30% of 0.50 -> dropped; only the top hit remains
+    assert len(weak_top) == 2  # 0.30 is 60% of 0.50 -> kept
+    assert len(strong_top) == 1  # 0.30 is 33% of 0.90 -> dropped; only the top hit remains
+
+
+def test_the_top_hit_is_always_cited_even_below_the_absolute_floor():
+    """An answer was generated, so it must show where it came from.
+
+    The refusal threshold in `select_context` already decided this question is
+    answerable; letting the citation floor strip the only source would render a
+    grounded answer as an ungrounded-looking one — worse than the spurious extra
+    citation the floor exists to prevent. Weak supporting chunks still go."""
+    kept = retrieval_service.select_citations([chunk(0.22), chunk(0.15)])
+
+    assert [c["score"] for c in kept] == [0.22]
 
 
 def test_select_citations_on_empty_input():
@@ -312,3 +326,33 @@ def test_normalise_hit_preserves_index_zero():
     )
 
     assert normalised["metadata"]["chunk_index"] == 0
+
+
+def test_citation_absolute_floor_rejects_noise_when_the_top_hit_is_weak():
+    """The relative floor alone opens up exactly when the answer is least certain.
+
+    Reproduces the measured case: a genuinely-absent question whose best match scored
+    0.36 dropped the relative cutoff to 0.18, admitting unrelated 0.19 chunks as
+    confident-looking sources on an answer that said "that isn't in the documents".
+    """
+    chunks = [
+        {"text": "a", "score": 0.36, "metadata": {}},
+        {"text": "b", "score": 0.349, "metadata": {}},
+        {"text": "c", "score": 0.19, "metadata": {}},   # cross-document noise
+        {"text": "d", "score": 0.192, "metadata": {}},  # cross-document noise
+    ]
+    kept = [c["score"] for c in retrieval_service.select_citations(chunks)]
+    assert kept == [0.36, 0.349]
+
+
+def test_relative_floor_still_governs_when_the_top_hit_is_strong():
+    """The absolute floor is a backstop, not a replacement — it must not become the
+    binding constraint on a confident answer, or it would start admitting noise that
+    the relative bar was correctly rejecting."""
+    chunks = [
+        {"text": "a", "score": 0.90, "metadata": {}},
+        {"text": "b", "score": 0.50, "metadata": {}},  # clears absolute, fails relative (0.45)
+        {"text": "c", "score": 0.30, "metadata": {}},
+    ]
+    kept = [c["score"] for c in retrieval_service.select_citations(chunks)]
+    assert kept == [0.90, 0.50]

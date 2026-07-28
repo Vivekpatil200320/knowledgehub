@@ -11,7 +11,7 @@ export function CitationPanel({ citations }: { citations: Citation[] }) {
 
   return (
     <div className="mt-3 border-t border-border pt-3">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+      <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.45px] text-accent">
         Sources
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -24,10 +24,10 @@ export function CitationPanel({ citations }: { citations: Citation[] }) {
               onClick={() => setOpenIndex(isOpen ? null : index)}
               aria-expanded={isOpen}
               title={`${citation.filename} — chunk ${citation.chunk_index}`}
-              className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-raised ${
+              className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-[11px] py-[5px] text-[10px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-raised ${
                 isOpen
                   ? "border-accent bg-accent-soft text-accent"
-                  : "border-border text-text-muted hover:border-border-strong hover:text-text"
+                  : "border-white/[0.14] text-text hover:border-border-strong"
               }`}
             >
               <FileText aria-hidden="true" className="size-3.5 shrink-0" />
@@ -41,7 +41,7 @@ export function CitationPanel({ citations }: { citations: Citation[] }) {
       </div>
 
       {openIndex !== null && (
-        <p className="mt-2 rounded-md bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-text-muted">
+        <p className="mt-2 rounded-lg bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-text-muted">
           {citations[openIndex].snippet}…
         </p>
       )}

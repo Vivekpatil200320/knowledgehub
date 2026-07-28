@@ -76,12 +76,19 @@ export function MessageBubble({
         )}
 
         {/* The condensed query is the memory mechanism made visible: it shows the
-            follow-up that was actually sent to retrieval. */}
+            follow-up that was actually sent to retrieval. Only the label gets the
+            brand's lime-monospace-uppercase tag treatment (mirroring their
+            "CONTEXT: FILENAME.PDF" provenance tag) — the query itself is a
+            variable-length sentence, not a short fixed label, so uppercasing the
+            whole thing would read as shouting rather than as a quiet tag. */}
         {condensedQuery && condensedQuery !== content && (
-          <p className="mt-2.5 flex items-start gap-1.5 text-xs text-text-subtle">
-            <Search aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+          <p className="mt-2.5 flex items-start gap-1.5 text-xs">
+            <Search aria-hidden="true" className="mt-0.5 size-3 shrink-0 text-accent" />
             <span>
-              Retrieved using <span className="italic">“{condensedQuery}”</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.45px] text-accent">
+                Retrieved using:
+              </span>{" "}
+              <span className="italic text-text-subtle">“{condensedQuery}”</span>
             </span>
           </p>
         )}

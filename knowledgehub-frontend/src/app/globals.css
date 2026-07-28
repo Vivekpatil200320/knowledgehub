@@ -1,57 +1,49 @@
 @import "tailwindcss";
 
-/* Semantic tokens, mapped per scheme. Components reference these rather than
-   raw neutral-* pairs, so a theme change happens in one place and light mode
-   can be tuned without hunting dark: variants through every component. */
+/* Chartered Vectorial brand palette, dark-only by design — see
+   /Users/vivekpatil/.claude/plans/knowledgehub-product-hidden-storm.md for the
+   full verification trail. The source site (charteredvectorial.ai) has no light
+   variant at all, and its lime accent measures 1.32:1 on white (fails AA outright),
+   so a "light mode" here could never actually carry the brand — it would just be a
+   duller, unrelated olive-green app wearing the same component shapes. Committing
+   to one palette that matches what the interviewer's own site actually does is more
+   honest than forking the accent into a light-safe derivative with no counterpart
+   in their product.
+   Every hex below with a "verified" comment was read via getComputedStyle on a
+   live element on charteredvectorial.ai, not eyeballed from a screenshot. Values
+   marked "designed" have no equivalent on the source site (a static marketing page
+   has no hover/soft-tint states to observe) and were chosen to preserve this app's
+   existing affordances (selected-row tint, hover glow) rather than invented from
+   nothing — flagged so nobody mistakes them for scraped facts later. */
 :root {
-  --surface: #ffffff;          /* page background */
-  --surface-raised: #f8fafc;   /* panels, sidebars */
-  --surface-sunken: #f1f5f9;   /* inputs, code, inset areas */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text: #0f172a;
-  --text-muted: #475569;       /* 7.0:1 on --surface */
-  /* Tuned against --accent-soft, not white: the selected sidebar row sits on the
-     tint, and #64748b measured 4.37:1 there — passing on the page but failing on
-     the one surface this text actually appears on. */
-  --text-subtle: #5b6a7f;      /* 5.1:1 on --accent-soft, 6.4:1 on --surface */
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-fg: #ffffff;
-  --accent-soft: #eff6ff;
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
-  --success: #047857;
-  --success-soft: #ecfdf5;
-  --warning: #b45309;
-  --warning-soft: #fffbeb;
-  --ring: #2563eb;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #0b0f19;
-    --surface-raised: #111827;
-    --surface-sunken: #1e293b;
-    --border: #1f2937;
-    --border-strong: #334155;
-    --text: #f1f5f9;
-    --text-muted: #b0bccd;
-    --text-subtle: #94a3b8;
-    /* Lightened rather than reused: the light-mode accent is too dark against a
-       dark surface to read as an action colour. */
-    --accent: #60a5fa;
-    --accent-hover: #93c5fd;
-    --accent-fg: #0b0f19;
-    --accent-soft: #172554;
-    --danger: #f87171;
-    --danger-soft: #2a1416;
-    --success: #34d399;
-    --success-soft: #0c2a22;
-    --warning: #fbbf24;
-    --warning-soft: #2b1f07;
-    --ring: #60a5fa;
-  }
+  --surface: #020f14;          /* verified: body background */
+  --surface-raised: #0a1a20;   /* designed: subtle lift off --surface. The real site's
+                                   cards are the *same* colour as the page (border-only
+                                   distinction) — but this app leans on a surface/raised
+                                   split for panel boundaries the reference has no
+                                   equivalent of (three panes vs. one scrolling page). */
+  --surface-sunken: #0f232a;   /* designed: one step above --surface-raised, for inputs/code */
+  --border: rgba(255, 255, 255, 0.08);         /* verified: exact card border recipe */
+  --border-strong: rgba(255, 255, 255, 0.16);  /* designed: doubled opacity, a "stronger" step */
+  --text: #ffffff;              /* verified: heading colour */
+  --text-muted: #c7c7c7;        /* verified: body copy colour (not pure white) */
+  --text-subtle: #8a8a8a;       /* verified via contrast check: 5.63:1 on --surface,
+                                    5.15:1 on --surface-raised — both clear AA */
+  --accent: #a6f63b;            /* verified: exact lime accent, 14.68:1 on --surface */
+  --accent-hover: #c3ff6b;      /* designed: lightened lime — no hover state observable
+                                    on a static marketing page */
+  --accent-fg: #020f14;         /* text-on-solid-accent, for the few remaining filled uses */
+  --accent-soft: rgba(166, 246, 59, 0.12);  /* designed tint formula: the source site's
+                                                badges are plain coloured text with no fill,
+                                                but this app's selected-row/active-chip
+                                                affordances need a background tint to work */
+  --danger: #ff6464;            /* verified: their "low confidence" semantic colour */
+  --danger-soft: rgba(255, 100, 100, 0.12);
+  --success: #a6f63b;           /* verified: their "high confidence" semantic colour */
+  --success-soft: rgba(166, 246, 59, 0.12);
+  --warning: #ffbe32;           /* verified: their "medium confidence" semantic colour */
+  --warning-soft: rgba(255, 190, 50, 0.12);
+  --ring: #a6f63b;
 }
 
 @theme inline {
@@ -74,7 +66,7 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-ring: var(--ring);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-jetbrains-mono);
 }
 

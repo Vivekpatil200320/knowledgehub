@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     # hit; unrelated documents' noise scores 0.20-0.40. 0.5 sits in the middle of that
     # gap with margin on both sides.
     citation_relative_floor: float = 0.5
+    # A relative floor alone has a failure mode that shows up exactly where it hurts
+    # most: the cutoff is a fraction of the top hit, so a weak top hit produces a weak
+    # cutoff. Measured — a question whose best match scored 0.36 ("what is Acme's SOC 2
+    # renewal date?", genuinely absent from the corpus) dropped the bar to 0.180 and
+    # admitted unrelated telemedicine chunks at 0.19, so an answer that correctly said
+    # "that isn't in the documents" still displayed two confident, irrelevant sources.
+    # The relative floor got loosest at the precise moment the answer was least certain.
+    # This absolute floor sits below every legitimate supporting citation observed
+    # (0.31-0.52) and above cross-document noise (0.19-0.20); both bars must be cleared.
+    citation_absolute_floor: float = 0.25
     chat_history_turns: int = 6
 
     cors_origins: str = "http://localhost:3000,http://localhost:3005"

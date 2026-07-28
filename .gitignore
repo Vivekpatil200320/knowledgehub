@@ -4,3 +4,8 @@ node_modules/
 .env.local
 
 .env
+
+# Working notes, not deliverables. code_review.md in particular quotes live API-key
+# prefixes — it must never ship with the submission, in git or in a zip.
+code_review.md
+CLAUDE.md

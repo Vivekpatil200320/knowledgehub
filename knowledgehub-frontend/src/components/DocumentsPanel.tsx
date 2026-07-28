@@ -80,7 +80,7 @@ export function DocumentsPanel({
             setDragging(false);
             onUpload(e.dataTransfer.files);
           }}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-ring ${
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors duration-150 focus-within:ring-2 focus-within:ring-ring ${
             dragging
               ? "border-accent bg-accent-soft"
               : "border-border-strong hover:border-accent hover:bg-surface-sunken"
@@ -133,7 +133,7 @@ export function DocumentsPanel({
               return (
                 <li
                   key={doc.id}
-                  className="group/doc rounded-lg border border-border bg-surface p-2.5"
+                  className="group/doc rounded-xl border border-border bg-surface p-2.5"
                 >
                   <div className="flex items-start gap-2">
                     <p
