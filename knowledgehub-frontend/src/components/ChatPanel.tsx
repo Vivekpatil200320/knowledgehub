@@ -11,24 +11,38 @@ export interface PendingReply {
   condensedQuery: string | null;
 }
 
+export interface StarterDocument {
+  filename: string;
+  title: string | null;
+}
+
 /**
  * Starters are built from the documents actually present. Generic prompts
  * ("what does the data say about pricing?") are frequently unanswerable by a
  * small corpus, so the first thing a new user sees would be a refusal.
+ *
+ * Prefer the ingested `title` (the document's own opening line) over the filename
+ * as the subject. A résumé named "candidate-profile.pdf" never contains the phrase
+ * "candidate profile", so a filename-derived starter about it can score below the
+ * refusal threshold — the retrieved-content check, not the wording, is what fails.
+ * `title` is only set once ingestion has actually completed, so older or
+ * still-processing documents fall back to the filename heuristic.
  */
-function startersFor(names: string[]): string[] {
-  const subject = (name: string) => name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-  if (names.length === 0) return [];
-  if (names.length === 1) {
+function startersFor(documents: StarterDocument[]): string[] {
+  const subject = (doc: StarterDocument) =>
+    doc.title ?? doc.filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+
+  if (documents.length === 0) return [];
+  if (documents.length === 1) {
     return [
-      `What is ${subject(names[0])} about?`,
-      `Summarise the key points of ${subject(names[0])}.`,
+      `What is ${subject(documents[0])} about?`,
+      `Summarise the key points of ${subject(documents[0])}.`,
     ];
   }
   return [
-    `What is ${subject(names[0])} about?`,
-    `Summarise the key points of ${subject(names[1])}.`,
-    `Compare ${subject(names[0])} and ${subject(names[1])}.`,
+    `What is ${subject(documents[0])} about?`,
+    `Summarise the key points of ${subject(documents[1])}.`,
+    `Compare ${subject(documents[0])} and ${subject(documents[1])}.`,
   ];
 }
 
@@ -42,7 +56,7 @@ export function ChatPanel({
   messages: ChatMessage[];
   pending: PendingReply | null;
   error: string | null;
-  readyDocuments: string[];
+  readyDocuments: StarterDocument[];
   onSend: (content: string) => void;
 }) {
   const hasDocuments = readyDocuments.length > 0;

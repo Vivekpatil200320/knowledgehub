@@ -184,7 +184,7 @@ function Workspace() {
     conversations.find((c) => c.id === selectedId)?.title ?? "New chat";
   const readyDocuments = documents
     .filter((d) => d.status === "ready")
-    .map((d) => d.filename);
+    .map((d) => ({ filename: d.filename, title: d.title }));
 
   const history = (
     <ConversationSidebar

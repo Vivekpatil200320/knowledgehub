@@ -45,17 +45,51 @@ def ensure_collection(vector_size: int) -> None:
             raise
 
 
-def store_chunks(chunks: list[dict], embeddings: list[list[float]]) -> None:
+def store_chunks(
+    chunks: list[dict], embeddings: list[list[float]], document_title: str | None = None
+) -> None:
+    """Store chunks, optionally tagging every point with the document's derived title.
+
+    `document_title` is written to every point rather than only chunk 0: it must
+    survive later regardless of which point a filter-based lookup happens to return,
+    and it must not vanish if chunk 0 is ever deleted independently of the rest.
+    """
     ensure_collection(len(embeddings[0]))
+    extra = {"document_title": document_title} if document_title else {}
     points = [
         PointStruct(
             id=str(uuid.uuid5(uuid.NAMESPACE_URL, chunk["id"])),
             vector=embedding,
-            payload={**chunk["metadata"], "text": chunk["text"]},
+            payload={**chunk["metadata"], "text": chunk["text"], **extra},
         )
         for chunk, embedding in zip(chunks, embeddings)
     ]
     get_client().upsert(collection_name=settings.qdrant_collection, points=points)
+
+
+def get_document_title(document_id: str) -> str | None:
+    """Look up the title derived at ingestion, without re-parsing the source file.
+
+    Uses the vector store rather than a SQL column so this needs no migration: the
+    project ships without one by design, and this value is derivable from data the
+    store already holds — the same reasoning applied to the conversation list's
+    last_message_at/message_count fields.
+    """
+    client = get_client()
+    if not client.collection_exists(settings.qdrant_collection):
+        return None
+
+    points, _ = client.scroll(
+        collection_name=settings.qdrant_collection,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
+        ),
+        limit=1,
+        with_payload=["document_title"],
+    )
+    if not points:
+        return None
+    return points[0].payload.get("document_title") if points[0].payload else None
 
 
 def search(query_embedding: list[float], top_k: int) -> list[dict]:

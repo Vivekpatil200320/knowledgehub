@@ -13,6 +13,9 @@ class DocumentOut(BaseModel):
     status_detail: str | None = None
     chunk_count: int | None = None
     created_at: datetime
+    # Looked up from Qdrant at request time, not a stored column — no migration
+    # needed, and it's only meaningful once ingestion has actually written chunks.
+    title: str | None = None
 
 
 class Citation(BaseModel):

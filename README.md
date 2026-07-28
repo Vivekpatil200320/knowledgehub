@@ -155,6 +155,19 @@ itself, and half the context budget buys nothing. Retrieval over-fetches, dedupl
 chunk text (not on `(document_id, chunk_index)`, which would miss copies *across* documents),
 then trims to the configured budget.
 
+**Suggested starter questions use the document's own title, not its filename.**
+Filenames are a poor stand-in for content: a résumé named `candidate-profile.pdf` or
+`resume-ai.pdf` never contains the phrase "candidate profile" anywhere in its own text, so a
+filename-derived starter like "What is candidate profile about?" scored nowhere near the
+refusal threshold — retrieval was correctly refusing a query about content that genuinely
+isn't there. Every document seen so far puts its real subject on the first non-empty line —
+a person's name, or a `# Title` heading — with contact details or body text after it, not
+before. `derive_document_title` takes that line at ingestion time and it's stored on every
+chunk's Qdrant payload (not a new SQL column — no migration needed, same reasoning as the
+conversation list's computed fields) and looked up once a document reaches `ready`. Verified
+directly against retrieval scores, not just the button label: "What is candidate profile
+about?" tops out at 0.09 (refused); "What is Priya Nair about?" tops out at 0.43 (answered).
+
 **Ingestion returns before it finishes.** Upload inserts a row, schedules a `BackgroundTask`,
 and returns `pending` immediately; the task advances the row through `processing` →
 `ready`/`failed` and the UI polls. A 200-page PDF would otherwise block the request past any
@@ -300,7 +313,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 59 tests
+cd knowledgehub-backend && pytest        # 67 tests
 ```
 
 ---

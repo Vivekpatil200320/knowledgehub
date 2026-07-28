@@ -10,6 +10,11 @@ export interface DocumentInfo {
   status_detail: string | null;
   chunk_count: number | null;
   created_at: string;
+  /** The document's own opening line (name/heading), looked up once it's ready.
+   *  Prefer this over `filename` when building a starter question — a résumé named
+   *  "candidate-profile.pdf" never contains the phrase "candidate profile", so a
+   *  filename-derived question about it can score below the refusal threshold. */
+  title: string | null;
 }
 
 export interface Citation {

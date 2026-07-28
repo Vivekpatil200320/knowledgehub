@@ -48,6 +48,57 @@ def test_list_and_get_document(client):
     assert client.get(f"/api/documents/{document_id}").json()["id"] == document_id
 
 
+def test_title_is_none_until_the_document_is_ready(client, monkeypatch):
+    """The title lookup hits Qdrant; a pending/failed document has nothing there yet.
+
+    Calling it anyway would be a wasted round trip that always misses, so it must be
+    gated on status rather than attempted unconditionally.
+    """
+    lookups = []
+    monkeypatch.setattr(
+        documents_route,
+        "get_document_title",
+        lambda document_id: lookups.append(document_id) or "should not be reached",
+    )
+
+    upload(client)
+
+    body = client.get("/api/documents").json()[0]
+    assert body["status"] == "pending"
+    assert body["title"] is None
+    assert lookups == []
+
+
+def test_title_is_looked_up_once_a_document_is_ready(client, monkeypatch):
+    document_id = upload(client).json()["id"]
+    _mark_ready(document_id)
+
+    monkeypatch.setattr(
+        documents_route,
+        "get_document_title",
+        lambda doc_id: "Priya Nair" if doc_id == document_id else None,
+    )
+
+    assert client.get(f"/api/documents/{document_id}").json()["title"] == "Priya Nair"
+    assert client.get("/api/documents").json()[0]["title"] == "Priya Nair"
+
+
+def _mark_ready(document_id: str) -> None:
+    """Flip a document to ready using the same session the test client is bound to.
+
+    The client fixture overrides get_db with a per-test engine, so the module-level
+    SessionLocal (bound to the app's default engine) would silently miss this row.
+    """
+    from app.core.db import get_db
+    from app.main import app
+    from app.models.orm import Document
+
+    db = next(app.dependency_overrides[get_db]())
+    document = db.get(Document, document_id)
+    document.status = "ready"
+    db.commit()
+
+
 def test_get_unknown_document_returns_404(client):
     response = client.get("/api/documents/does-not-exist")
 

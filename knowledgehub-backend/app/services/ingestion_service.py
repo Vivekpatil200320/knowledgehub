@@ -9,6 +9,32 @@ from app.services.vector_store import delete_document_vectors, store_chunks
 
 logger = logging.getLogger("knowledgehub.ingestion")
 
+TITLE_MAX_CHARS = 80
+
+
+def derive_document_title(text: str) -> str | None:
+    """Take the document's own opening line as its title.
+
+    Filenames are a poor substitute for this: a résumé named "candidate-profile.pdf"
+    or "resume-ai.pdf" produces a starter question like "What is candidate profile
+    about?" that scores nowhere near the refusal threshold, because "candidate
+    profile" never appears anywhere in the document — retrieval correctly refuses a
+    query about content that isn't there. In every document seen so far, the true
+    subject — a person's name, or a "# Title" heading — is the first non-empty line;
+    contact details and body text come after it, not before.
+    """
+    for line in text.splitlines():
+        stripped = line.strip().lstrip("#").strip()
+        if not stripped:
+            continue
+        if len(stripped) <= TITLE_MAX_CHARS:
+            return stripped
+        clipped = stripped[:TITLE_MAX_CHARS]
+        if " " in clipped:
+            clipped = clipped[: clipped.rindex(" ")]
+        return clipped.rstrip(" ,.;:—-") + "…"
+    return None
+
 
 def run_ingestion(document_id: str) -> None:
     """Background task: parse -> chunk -> embed -> store, updating document status as it goes.
@@ -32,7 +58,7 @@ def run_ingestion(document_id: str) -> None:
             raise ValueError("Document produced no chunks after splitting.")
 
         embeddings = embed_chunks(chunks)
-        store_chunks(chunks, embeddings)
+        store_chunks(chunks, embeddings, document_title=derive_document_title(text))
 
         document.status = "ready"
         document.chunk_count = len(chunks)
