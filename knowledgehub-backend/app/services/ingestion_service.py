@@ -36,6 +36,27 @@ def derive_document_title(text: str) -> str | None:
     return None
 
 
+def with_document_context(chunks: list[dict], filename: str, title: str | None) -> None:
+    """Prefix each chunk's *embedded* form with what document it came from.
+
+    Users refer to a document by the name they see in the sidebar, but only its body
+    text was ever embedded — so "describe candidate profile" scored 0.09 against a
+    résumé whose filename says "candidate profile" and whose text never does, and the
+    system refused a question about a document it was holding. Two of the three corpus
+    files hid this: "acme-cloud-platform.md" and "zenith-analytics-suite.md" name
+    themselves in their own headings, so filename queries scored ~0.58 by accident.
+
+    Sets `embed_text` rather than mutating `text`: the header must reach the embedding
+    without leaking into citation snippets or the context the model reads back.
+    """
+    header = f"Document: {filename}"
+    if title and title.lower() != filename.lower():
+        header += f"\nTitle: {title}"
+
+    for chunk in chunks:
+        chunk["embed_text"] = f"{header}\n\n{chunk['text']}"
+
+
 def run_ingestion(document_id: str) -> None:
     """Background task: parse -> chunk -> embed -> store, updating document status as it goes.
 
@@ -57,8 +78,11 @@ def run_ingestion(document_id: str) -> None:
         if not chunks:
             raise ValueError("Document produced no chunks after splitting.")
 
+        title = derive_document_title(text)
+        with_document_context(chunks, document.filename, title)
+
         embeddings = embed_chunks(chunks)
-        store_chunks(chunks, embeddings, document_title=derive_document_title(text))
+        store_chunks(chunks, embeddings, document_title=title)
 
         document.status = "ready"
         document.chunk_count = len(chunks)

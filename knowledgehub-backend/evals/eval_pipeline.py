@@ -84,6 +84,19 @@ CASES = [
         ],
         "forbidden": ["Acme", "Zenith", "Parul"],
     },
+    # --- findable by the name the user actually sees --------------------------
+    # The corpus hid this for a long time: "acme-cloud-platform.md" and
+    # "zenith-analytics-suite.md" name themselves in their own headings, so querying
+    # them by filename scored ~0.58 by accident. "candidate-profile.pdf" is a résumé
+    # that never says "candidate profile", and scored 0.09 — refused. Only the
+    # filename/content mismatch exercises this, so only this case guards it.
+    {
+        "name": "findability: document referenced by its filename, not its content",
+        "turns": ["describe candidate profile"],
+        "expected_source": "candidate-profile.pdf",
+        "expected_any": ["Priya", "engineer"],
+        "forbidden": ["couldn't find", "could not find"],
+    },
     # --- no cross-document contamination (negative assertion) -----------------
     {
         "name": "no contamination: skills answer stays within the resume",

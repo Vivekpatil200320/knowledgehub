@@ -313,7 +313,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 67 tests
+cd knowledgehub-backend && pytest        # 74 tests
 ```
 
 ---

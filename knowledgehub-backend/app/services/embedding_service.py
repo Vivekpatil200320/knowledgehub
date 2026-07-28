@@ -17,8 +17,14 @@ def get_embedder() -> NVIDIAEmbeddings:
 
 
 def embed_chunks(chunks: list[dict]) -> list[list[float]]:
-    """Single batched call — never loop one chunk per API request."""
-    return get_embedder().embed_documents([c["text"] for c in chunks])
+    """Single batched call — never loop one chunk per API request.
+
+    Embeds `embed_text` when the ingestion pipeline supplied it, falling back to the
+    raw chunk. The two differ because what gets embedded is not what gets shown: the
+    embedded form carries a document header so the file can be found by name, while
+    the payload keeps the original text so citations and snippets stay clean.
+    """
+    return get_embedder().embed_documents([c.get("embed_text") or c["text"] for c in chunks])
 
 
 def embed_query(query: str) -> list[float]:
