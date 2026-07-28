@@ -92,11 +92,26 @@ def run_ingestion(document_id: str) -> None:
 
     except Exception as exc:
         logger.exception("Ingestion failed for %s", document_id)
-        delete_document_vectors(document_id)
+
+        # Cleanup must not be able to swallow the status update: without this,
+        # a broken Qdrant connection during cleanup would leave the row stuck on
+        # "processing" forever instead of ever reaching "failed".
+        try:
+            delete_document_vectors(document_id)
+        except Exception:
+            logger.exception("Failed to clean up vectors for %s after ingestion failure", document_id)
+
         document = db.get(Document, document_id)
         if document is not None:
             document.status = "failed"
-            document.status_detail = str(exc)[:500]
+            # ValueError is raised deliberately above with a message meant to be read
+            # (empty/scanned file, no chunks) — anything else is a provider/DB error
+            # whose raw text (a URL, an auth failure, a stack frame) isn't for the user.
+            document.status_detail = (
+                str(exc)[:500]
+                if isinstance(exc, ValueError)
+                else "Processing failed. Please try re-uploading the file."
+            )
             db.commit()
     finally:
         db.close()

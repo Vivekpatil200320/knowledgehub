@@ -91,6 +91,7 @@ export async function streamMessage(
   conversationId: string,
   content: string,
   handlers: StreamHandlers,
+  signal?: AbortSignal,
 ): Promise<void> {
   const response = await fetch(
     `${API_URL}/api/conversations/${conversationId}/messages/stream`,
@@ -98,6 +99,7 @@ export async function streamMessage(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
+      signal,
     },
   );
 
@@ -121,11 +123,20 @@ export async function streamMessage(
       const line = frame.trim();
       if (!line.startsWith("data:")) continue;
 
-      const event = JSON.parse(line.slice(5).trim());
-      if (event.type === "token") handlers.onToken(event.data);
-      else if (event.type === "citations") handlers.onCitations(event.data);
-      else if (event.type === "condensed_query") handlers.onCondensedQuery?.(event.data);
-      else if (event.type === "error") handlers.onError?.(event.data);
+      // A malformed or partial frame must not take down the whole read loop —
+      // one bad chunk shouldn't turn a live answer into an unhandled rejection.
+      let event: { type: string; data: unknown };
+      try {
+        event = JSON.parse(line.slice(5).trim());
+      } catch {
+        continue;
+      }
+
+      if (event.type === "token") handlers.onToken(event.data as string);
+      else if (event.type === "citations") handlers.onCitations(event.data as Citation[]);
+      else if (event.type === "condensed_query")
+        handlers.onCondensedQuery?.(event.data as string);
+      else if (event.type === "error") handlers.onError?.(event.data as string);
     }
   }
 }

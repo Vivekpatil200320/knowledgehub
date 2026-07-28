@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import select
@@ -16,6 +17,8 @@ from app.services.retrieval_service import (
     select_context,
     to_citations,
 )
+
+logger = logging.getLogger("knowledgehub.chat")
 
 REFUSAL_MESSAGE = (
     "I couldn't find anything in the uploaded documents that answers that. "
@@ -172,7 +175,11 @@ async def stream_answer(conversation_id: str, content: str) -> AsyncGenerator[st
         yield _sse("citations", citations)
         yield _sse("done", None)
 
-    except Exception as exc:
-        yield _sse("error", str(exc))
+    except Exception:
+        # str(exc) can carry internal detail (file paths, a provider's raw API error,
+        # a DB error string) straight to the browser. Log the real thing server-side
+        # and give the client only a generic, safe message.
+        logger.exception("Stream error for conversation %s", conversation_id)
+        yield _sse("error", "Something went wrong generating a response. Please try again.")
     finally:
         db.close()

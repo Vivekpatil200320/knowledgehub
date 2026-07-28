@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Menu, PanelRight } from "lucide-react";
 import { ChatPanel, type PendingReply } from "@/components/ChatPanel";
@@ -38,6 +38,15 @@ function Workspace() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
 
+  // Guards against a stream outliving the conversation it was sent for: switching
+  // conversations mid-stream must not let that stream's tokens (or its final
+  // re-fetched thread) render into whatever conversation is selected afterward.
+  // The AbortController stops the network read; the generation counter is a second,
+  // independent guard for the narrow race where a response finishes right as the
+  // abort fires — belt and suspenders, since either one alone leaves that window open.
+  const streamGeneration = useRef(0);
+  const abortController = useRef<AbortController | null>(null);
+
   const refreshConversations = useCallback(async () => {
     try {
       setConversations(await listConversations());
@@ -58,6 +67,12 @@ function Workspace() {
     refreshConversations();
     refreshDocuments();
   }, [refreshConversations, refreshDocuments]);
+
+  // Belt-and-suspenders: abort any in-flight stream if the page unmounts entirely,
+  // not just on a same-page conversation switch.
+  useEffect(() => {
+    return () => abortController.current?.abort();
+  }, []);
 
   // Ingestion runs in the background, so poll while anything is still in flight.
   useEffect(() => {
@@ -89,6 +104,10 @@ function Workspace() {
   }, [selectedId]);
 
   function select(id: string | null) {
+    // Any in-flight stream belongs to the conversation being left; abort it so its
+    // tokens can't keep arriving and rendering into the one being switched to.
+    abortController.current?.abort();
+    setPending(null);
     router.replace(id ? `/?c=${id}` : "/", { scroll: false });
     setChatError(null);
     setHistoryOpen(false);
@@ -124,24 +143,44 @@ function Workspace() {
     ]);
     setPending({ content: "", citations: [], condensedQuery: null });
 
+    const myGeneration = ++streamGeneration.current;
+    const isCurrent = () => streamGeneration.current === myGeneration;
+    const controller = new AbortController();
+    abortController.current = controller;
+
     try {
-      await streamMessage(conversationId, content, {
-        onToken: (token) =>
-          setPending((prev) => (prev ? { ...prev, content: prev.content + token } : prev)),
-        onCitations: (citations) =>
-          setPending((prev) => (prev ? { ...prev, citations } : prev)),
-        onCondensedQuery: (query) =>
-          setPending((prev) => (prev ? { ...prev, condensedQuery: query } : prev)),
-        onError: (message) => setChatError(message),
-      });
-      // Re-read so the thread reflects what was actually persisted.
-      setMessages(await listMessages(conversationId));
+      await streamMessage(
+        conversationId,
+        content,
+        {
+          onToken: (token) =>
+            isCurrent() &&
+            setPending((prev) => (prev ? { ...prev, content: prev.content + token } : prev)),
+          onCitations: (citations) =>
+            isCurrent() && setPending((prev) => (prev ? { ...prev, citations } : prev)),
+          onCondensedQuery: (query) =>
+            isCurrent() &&
+            setPending((prev) => (prev ? { ...prev, condensedQuery: query } : prev)),
+          onError: (message) => isCurrent() && setChatError(message),
+        },
+        controller.signal,
+      );
+      // Re-read so the thread reflects what was actually persisted — but only if
+      // this is still the conversation on screen; otherwise this would overwrite
+      // whatever thread the user has since switched to.
+      if (isCurrent()) setMessages(await listMessages(conversationId));
     } catch (err) {
-      setChatError(err instanceof Error ? err.message : "Something went wrong");
+      // An abort means the user navigated away — that's not a failure to report.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (isCurrent()) {
+        setChatError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
-      setPending(null);
-      // The first message names the thread, so the sidebar needs re-reading.
-      refreshConversations();
+      if (isCurrent()) {
+        setPending(null);
+        // The first message names the thread, so the sidebar needs re-reading.
+        refreshConversations();
+      }
     }
   }
 

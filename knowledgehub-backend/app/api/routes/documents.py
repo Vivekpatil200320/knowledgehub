@@ -1,3 +1,6 @@
+import logging
+from pathlib import Path
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,6 +11,8 @@ from app.models.schemas import DocumentOut
 from app.services.file_parser import save_upload
 from app.services.ingestion_service import run_ingestion
 from app.services.vector_store import delete_document_vectors, get_document_title
+
+logger = logging.getLogger("knowledgehub.documents")
 
 router = APIRouter(tags=["documents"])
 
@@ -42,9 +47,18 @@ async def upload_document(
         content_type=content_type,
         status="pending",
     )
-    db.add(document)
-    db.commit()
-    db.refresh(document)
+    try:
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        # The file already landed on disk in save_upload() above; if the row that's
+        # supposed to reference it never gets created, that file has no owner and no
+        # way to ever be found or deleted again. Clean it up rather than leak it.
+        logger.exception("Failed to save document record for %s; removing orphaned upload", filename)
+        db.rollback()
+        Path(stored_path).unlink(missing_ok=True)
+        raise
 
     background_tasks.add_task(run_ingestion, document.id)
     # Freshly created: never ready yet, so no title lookup is possible or needed.

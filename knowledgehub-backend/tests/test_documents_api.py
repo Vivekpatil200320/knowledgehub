@@ -129,3 +129,31 @@ def test_empty_message_is_rejected(client):
     )
 
     assert response.status_code == 422
+
+
+def test_orphaned_upload_file_is_removed_if_the_db_commit_fails(client, monkeypatch, tmp_path):
+    """save_upload() writes the file to disk before the DB row exists. If the commit
+    that's supposed to create the owning row fails, that file has no reference and no
+    way to ever be found or deleted again — it must be cleaned up right there."""
+    stored_path = tmp_path / "already-written.md"
+    stored_path.write_bytes(b"content that made it to disk")
+
+    async def fake_save_upload(file):
+        return "notes.md", str(stored_path), "md"
+
+    monkeypatch.setattr(documents_route, "save_upload", fake_save_upload)
+
+    from sqlalchemy.orm import Session
+
+    def failing_commit(self):
+        raise RuntimeError("simulated commit failure")
+
+    monkeypatch.setattr(Session, "commit", failing_commit)
+
+    # Starlette's TestClient re-raises an unhandled server exception after sending
+    # the response (for visibility in test output), so the real assertion here is
+    # that cleanup ran and the original failure still surfaces — not swallowed.
+    with pytest.raises(RuntimeError, match="simulated commit failure"):
+        upload(client)
+
+    assert not stored_path.exists()
