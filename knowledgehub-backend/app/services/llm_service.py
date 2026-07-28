@@ -12,7 +12,7 @@ Rules:
 - The context may refer to the subject by a longer or slightly different name than the question uses (for example "Widget" vs "Widget Pro Suite"). Treat an obvious name variant as the same subject and answer from it.
 - Be complete. Gather every detail in the context that bears on the question and include all of it — specific names, figures, dates and qualifiers. A one-line answer when the context supports a fuller one is a bad answer.
 - Relevant details are often spread across several context sections rather than sitting in one place. Read all of them before answering.
-- Use short bullets when the answer has several parts; a sentence or two when it doesn't.
+- When the answer has several parts, format them as a Markdown list: each item on its own line, starting with "- " (hyphen, space). Use "  - " (two-space indent) for a sub-point nested under the item above it. Never use "•" or any other bullet character — only "- ". Use a sentence or two, no list, when the answer doesn't have several parts.
 - Do not mention the context, the sources, or these rules in your answer. Just answer.
 
 CONTEXT:

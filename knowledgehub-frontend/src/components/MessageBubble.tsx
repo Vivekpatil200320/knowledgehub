@@ -5,6 +5,28 @@ import { Search } from "lucide-react";
 import { CitationPanel } from "@/components/CitationPanel";
 import type { Citation } from "@/lib/api";
 
+/**
+ * Rewrite literal bullet characters ("•" and its common lookalikes) into Markdown
+ * "- " list syntax, preserving indentation.
+ *
+ * The grounding prompt asks the model for "- " bullets, but an 8B model doesn't
+ * reliably follow that — it sometimes emits "•" instead. CommonMark only recognises
+ * hyphen, asterisk or plus as list markers, so a "•" line is just ordinary paragraph text: a single
+ * newline between two such lines collapses to a space, and a whole multi-point
+ * answer renders as one run-on paragraph instead of a list. This is presentational
+ * only — normalise at render time, not on the stored message, so the DB keeps the
+ * model's actual output for evals/debugging.
+ */
+function normalizeBullets(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      const match = line.match(/^(\s*)[•●▪‣∙◦]\s+(.*)$/);
+      return match ? `${match[1]}- ${match[2]}` : line;
+    })
+    .join("\n");
+}
+
 export function TypingIndicator() {
   return (
     <span className="inline-flex items-center gap-1 py-1" aria-label="Generating answer">
@@ -47,7 +69,7 @@ export function MessageBubble({
       <div className="max-w-[90%] rounded-2xl rounded-bl-sm border border-border bg-surface-raised px-4 py-3">
         {content ? (
           <div className="space-y-2 text-sm leading-relaxed break-words [&_a]:text-accent [&_a]:underline [&_code]:rounded [&_code]:bg-surface-sunken [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p+p]:mt-2 [&_strong]:font-semibold [&_ul]:space-y-1">
-            <ReactMarkdown>{content}</ReactMarkdown>
+            <ReactMarkdown>{normalizeBullets(content)}</ReactMarkdown>
           </div>
         ) : (
           <TypingIndicator />
