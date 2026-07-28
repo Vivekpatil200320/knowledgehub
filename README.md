@@ -189,7 +189,7 @@ the LLM call is skipped entirely rather than made and discarded.
 
 ## Evaluation
 
-Ten cases, deterministic substring assertions, no LLM judge — fast, free, and reproducible.
+Eleven cases, deterministic term assertions, no LLM judge — fast, free, and reproducible.
 
 ```bash
 python evals/eval_pipeline.py    # ingests the corpus if needed, then runs
@@ -219,7 +219,7 @@ this harness exists to catch. `\b` would have been the wrong tool, since several
 numeric (`99.95`, `0.000024`): boundary assertions on alphanumerics let `$45` and `45%`
 satisfy `45` while `1945` does not.
 
-**Retrieval precision 100% · Completeness 100% · Contamination-free 100% · 10/10 passed**
+**Retrieval precision 100% · Completeness 100% · Contamination-free 100% · 11/11 passed**
 
 | Case | What it guards |
 |---|---|
@@ -313,7 +313,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 74 tests
+cd knowledgehub-backend && pytest        # 81 tests
 ```
 
 ---
