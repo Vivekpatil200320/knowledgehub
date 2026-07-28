@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: knowledgehub-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: knowledgehub-backend/requirements.txt
+
+      # torch is a transitive dependency of sentence-transformers (the local reranker).
+      # Installing requirements.txt directly resolves the CUDA wheel by default on
+      # Linux runners, pulling several GB of unused nvidia-cu*/triton packages this
+      # CPU-only test job never touches. See Dockerfile's comment for the full story —
+      # this mirrors the same fix so CI doesn't pay the same tax on every run.
+      - name: Install CPU-only torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # No live Qdrant or NVIDIA key needed: every test mocks the service boundary it
+      # would otherwise cross (see tests/conftest.py's rerank-disabling fixture and the
+      # get_embedder/get_nvidia_llm/get_reranker monkeypatches throughout tests/). The
+      # eval suite (evals/eval_pipeline.py) is the layer that needs a live stack — it's
+      # a heavier, deliberately separate manual step per the README, not run in CI.
+      - name: Run tests
+        run: pytest -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: knowledgehub-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: knowledgehub-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build

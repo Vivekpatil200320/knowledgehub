@@ -20,9 +20,14 @@ services:
       DATABASE_URL: sqlite:////app/data/knowledgehub.db
       UPLOAD_DIR: /app/uploads
       CORS_ORIGINS: http://localhost:3000
+      HF_HOME: /app/hf_cache
     volumes:
       - backend_data:/app/data
       - backend_uploads:/app/uploads
+      # Without this, the reranker's ~90MB cross-encoder re-downloads from HuggingFace
+      # on every `docker compose up --build` — the container filesystem, not just the
+      # image layer, is what actually caches it, and `--build` recreates the container.
+      - backend_hf_cache:/app/hf_cache
     depends_on:
       - qdrant
 
@@ -41,3 +46,4 @@ volumes:
   qdrant_storage:
   backend_data:
   backend_uploads:
+  backend_hf_cache:

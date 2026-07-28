@@ -50,6 +50,17 @@ class Settings(BaseSettings):
     citation_absolute_floor: float = 0.25
     chat_history_turns: int = 6
 
+    # Cross-encoder reranking. NVIDIA's hosted rerank NIMs were evaluated first — every
+    # model this account's key reports as available either 404s (not provisioned for
+    # this account) or, for the one that does resolve, has been EOL since 2026-05-18.
+    # A local cross-encoder has no such dependency: it runs in-process, once loaded.
+    rerank_enabled: bool = True
+    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # How much wider than top_k to over-fetch before reranking narrows back down.
+    # Reranking a set no bigger than top_k would just re-sort what cosine search
+    # already chose; it needs a real candidate pool to find a better answer within.
+    rerank_candidate_multiplier: int = 4
+
     cors_origins: str = "http://localhost:3000,http://localhost:3005"
 
 

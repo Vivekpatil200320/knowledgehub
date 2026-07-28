@@ -57,6 +57,26 @@ def test_strong_top_hit_keeps_weaker_supporting_chunks():
     assert [c["score"] for c in kept] == [0.46, 0.20, 0.10]
 
 
+def test_refusal_looks_past_a_reranked_top_position_for_the_best_cosine_score():
+    """Reproduces a measured false refusal: "describe candidate profile" — a plainly
+    answerable, in-corpus question — was refused outright once reranking shipped,
+    because `select_context` read `chunks[0]["score"]` and reranking can (and did)
+    promote a chunk with a *weaker* cosine score to the front of the list.
+
+    Refusal has to ask "is there a genuinely strong cosine match anywhere in this set",
+    not "is whichever chunk currently sits first a strong cosine match" — those are the
+    same question only when nothing has reordered the list, which reranking does by
+    design. A chunk below `refusal_score_threshold` at position 0, with a clearly
+    in-corpus chunk right behind it, must still answer.
+    """
+    reranked_order = [chunk(0.15), chunk(0.46), chunk(0.30)]
+
+    kept = retrieval_service.select_context(reranked_order)
+
+    assert kept != []
+    assert 0.46 in [c["score"] for c in kept]
+
+
 def test_noise_below_the_floor_is_still_excluded():
     kept = retrieval_service.select_context([chunk(0.46), chunk(0.01)])
 
@@ -356,3 +376,115 @@ def test_relative_floor_still_governs_when_the_top_hit_is_strong():
     ]
     kept = [c["score"] for c in retrieval_service.select_citations(chunks)]
     assert kept == [0.90, 0.50]
+
+
+def _fake_rerank(scores: dict[str, float]):
+    """Mimics the real `rerank()` contract: attaches `rerank_score` to every chunk
+    and returns them sorted by it, descending."""
+
+    def _rerank(query, chunks):
+        for c in chunks:
+            c["rerank_score"] = scores[c["text"]]
+        return sorted(chunks, key=lambda c: c["rerank_score"], reverse=True)
+
+    return _rerank
+
+
+def test_retrieve_reranks_when_enabled(monkeypatch):
+    """`retrieve()` must actually call the reranker, not just have one available —
+    a wiring test, distinct from `test_rerank_service.py`'s coverage of `rerank()`
+    itself. Fetches a wider pool (`rerank_candidate_multiplier`, not the plain `*2`)
+    so the cross-encoder has a real candidate set to search, and lets it promote a
+    chunk cosine ranked lower to the front of the final order."""
+    monkeypatch.setattr(retrieval_service.settings, "rerank_enabled", True)
+    monkeypatch.setattr(retrieval_service.settings, "rerank_candidate_multiplier", 3)
+
+    hits = [
+        {"text": "cosine-favourite", "score": 0.9, "metadata": {}},
+        {"text": "cross-encoder-favourite", "score": 0.5, "metadata": {}},
+        {"text": "filler", "score": 0.4, "metadata": {}},
+    ]
+    monkeypatch.setattr(retrieval_service, "embed_query", lambda q: [0.0])
+    monkeypatch.setattr(retrieval_service, "search", lambda emb, limit: hits)
+    # Cross-encoder disagrees with cosine about which chunk is best.
+    monkeypatch.setattr(
+        retrieval_service,
+        "rerank",
+        _fake_rerank({"cosine-favourite": 1.0, "cross-encoder-favourite": 10.0, "filler": -5.0}),
+    )
+
+    out = retrieval_service.retrieve("query", top_k=1)
+
+    assert out[0]["text"] == "cross-encoder-favourite"
+
+
+def test_retrieve_never_lets_reranking_evict_the_cosine_top_hit(monkeypatch):
+    """Reproduces a measured regression: a résumé's EDUCATION chunk was cosine's clear
+    #1 match for "where did she study?" (0.46, the best score in the whole corpus) but
+    scored -11.36 on the cross-encoder — indistinguishable from unrelated noise — and
+    got trimmed out of the final top-k entirely, turning a plainly answerable question
+    into a false refusal. The cosine top-k must survive regardless of how badly the
+    cross-encoder scores it; reranking may only ADD chunks beyond that guaranteed set."""
+    monkeypatch.setattr(retrieval_service.settings, "rerank_enabled", True)
+    monkeypatch.setattr(retrieval_service.settings, "rerank_candidate_multiplier", 4)
+
+    hits = [
+        {"text": "cosine-best-but-reranker-hates-it", "score": 0.9, "metadata": {}},
+        *[{"text": f"noise-{i}", "score": 0.05, "metadata": {}} for i in range(5)],
+    ]
+    monkeypatch.setattr(retrieval_service, "embed_query", lambda q: [0.0])
+    monkeypatch.setattr(retrieval_service, "search", lambda emb, limit: hits)
+    scores = {"cosine-best-but-reranker-hates-it": -11.36}
+    scores.update({f"noise-{i}": -11.3 + i * 0.01 for i in range(5)})  # all "better" noise
+    monkeypatch.setattr(retrieval_service, "rerank", _fake_rerank(scores))
+
+    out = retrieval_service.retrieve("query", top_k=1)
+
+    assert "cosine-best-but-reranker-hates-it" in [c["text"] for c in out]
+
+
+def test_retrieve_lets_reranking_add_beyond_the_cosine_floor(monkeypatch):
+    """The other half of the contract: reranking isn't inert — it can still surface a
+    chunk cosine under-ranked, as long as doing so doesn't cost the guaranteed floor."""
+    monkeypatch.setattr(retrieval_service.settings, "rerank_enabled", True)
+    monkeypatch.setattr(retrieval_service.settings, "rerank_candidate_multiplier", 3)
+
+    hits = [
+        {"text": "cosine-top", "score": 0.9, "metadata": {}},
+        {"text": "cosine-runner-up-but-actually-best", "score": 0.5, "metadata": {}},
+        {"text": "filler", "score": 0.4, "metadata": {}},
+    ]
+    monkeypatch.setattr(retrieval_service, "embed_query", lambda q: [0.0])
+    monkeypatch.setattr(retrieval_service, "search", lambda emb, limit: hits)
+    monkeypatch.setattr(
+        retrieval_service,
+        "rerank",
+        _fake_rerank(
+            {"cosine-top": 1.0, "cosine-runner-up-but-actually-best": 10.0, "filler": -5.0}
+        ),
+    )
+
+    out = retrieval_service.retrieve("query", top_k=1)
+
+    texts = [c["text"] for c in out]
+    assert "cosine-top" in texts  # the guaranteed floor
+    assert "cosine-runner-up-but-actually-best" in texts  # what reranking added
+    assert texts[0] == "cosine-runner-up-but-actually-best"  # and it's rightly first
+
+
+def test_retrieve_skips_reranking_when_disabled(monkeypatch):
+    monkeypatch.setattr(retrieval_service.settings, "rerank_enabled", False)
+    calls = []
+    monkeypatch.setattr(retrieval_service, "embed_query", lambda q: [0.0])
+    monkeypatch.setattr(
+        retrieval_service,
+        "search",
+        lambda emb, limit: [{"text": "only", "score": 0.9, "metadata": {}}],
+    )
+    monkeypatch.setattr(
+        retrieval_service, "rerank", lambda query, chunks: calls.append(1) or chunks
+    )
+
+    retrieval_service.retrieve("query", top_k=1)
+
+    assert calls == []

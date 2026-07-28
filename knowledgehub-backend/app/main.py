@@ -19,6 +19,15 @@ logger = logging.getLogger("knowledgehub")
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     logger.info("Database initialised")
+
+    if settings.rerank_enabled:
+        # Loading the cross-encoder costs ~10-15s the first time. Doing it here means
+        # the first real chat request pays that cost, rather than a live demo query.
+        from app.services.rerank_service import get_reranker
+
+        get_reranker()
+        logger.info("Reranker loaded (%s)", settings.rerank_model)
+
     yield
 
 

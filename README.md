@@ -104,6 +104,7 @@ flowchart TB
 | Relational DB | SQLite | Conversation history needs a real DB; SQLite needs zero infra. `DATABASE_URL` swaps in Postgres unchanged |
 | Embeddings | NVIDIA NIM `llama-nemotron-embed-1b-v2` | Free hosted tier, 2048-dim, no local GPU |
 | LLM | NVIDIA NIM `meta/llama-3.1-8b-instruct` | Free hosted inference; `LLM_PROVIDER=ollama` switches to local for offline dev |
+| Reranking | local cross-encoder, `ms-marco-MiniLM-L-6-v2` | NVIDIA's hosted rerank NIMs were evaluated first and rejected — see below |
 
 ---
 
@@ -343,6 +344,14 @@ docker run -d -p 6333:6333 qdrant/qdrant
 uvicorn app.main:app --reload --port 8000
 ```
 
+On first run, the reranker downloads a ~90MB model from Hugging Face and caches it locally
+(`~/.cache/huggingface`) — a one-time cost, not repeated on subsequent starts. On Linux, `pip
+install -r requirements.txt` directly resolves the CUDA build of `torch` (a transitive
+dependency via `sentence-transformers`) by default, pulling several GB of unused `nvidia-cu*`
+packages this CPU-only service never touches; install the CPU wheel first if that matters to
+you: `pip install torch --index-url https://download.pytorch.org/whl/cpu` before the line
+above (the Dockerfile does this automatically — see its comment for the full story).
+
 Frontend:
 ```bash
 cd knowledgehub-frontend
@@ -352,7 +361,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 106 tests
+cd knowledgehub-backend && pytest        # 120 tests
 ```
 
 ---
@@ -442,22 +451,74 @@ below rather than pretended away.
 
 ---
 
+### Reranking: NVIDIA evaluated and rejected, a local cross-encoder chosen — and a real bug it caused
+
+NVIDIA's hosted rerank NIMs were the first thing tried, since the rest of this pipeline already
+runs on NVIDIA. Every rerank model the API itself reports as available for this account was
+tested directly against a live query and rejected: `nvidia/llama-3.2-nv-rerankqa-1b-v2` returned
+`410 Gone` ("reached end of life on 2026-05-18"), and every other candidate (`nv-rerankqa-mistral-4b-v3`,
+`llama-3.2-nv-rerankqa-1b-v1`) 404s as not provisioned for this account. A local cross-encoder
+(`sentence-transformers`, `cross-encoder/ms-marco-MiniLM-L-6-v2`) has no such dependency: it runs
+in-process once loaded, with no account entitlement to lose.
+
+**How it's wired in** (`retrieval_service.retrieve`, `rerank_service.py`): cosine search over-fetches
+a wider candidate pool (`rerank_candidate_multiplier`), and the cross-encoder reads `(query,
+passage)` together in one forward pass — far more accurate at judging relevance than comparing
+two independently-embedded vectors, but far too slow to run over a whole corpus, which is why it
+only reranks the small pool cosine already narrowed down. `rerank()` prefixes each passage with
+`Document: {filename}` before scoring it — without this, "describe candidate profile" scored a
+résumé's own chunks at -11.4, indistinguishable from completely unrelated documents, because the
+query shares no vocabulary with the résumé body. The bi-encoder gets this exact signal through
+`embedding_service.with_document_context` at embedding time; the cross-encoder needed the same
+hook, since it never sees `embed_text`, only the citation-safe raw chunk text.
+
+**A regression the eval suite caught, not a code review.** After wiring reranking in, the eval
+suite dropped from 11/11 to 8/11 — specifically the résumé's education-pairing and follow-up
+cases. Root cause: a small local cross-encoder can badly misjudge a chunk that cosine search
+found with total confidence. For "where did she study?", the résumé's EDUCATION section was
+cosine's #1 match in the entire corpus (0.46) — and scored **-11.36** on the cross-encoder,
+statistically identical to unrelated noise, because the chunk's *opening* sentence (an artifact
+of the 128-character chunk overlap) is unrelated job-history text carried over from the previous
+chunk boundary. The cross-encoder apparently weighs a passage's opening tokens heavily and never
+recovers once they're off-topic. Letting reranking fully replace cosine selection meant it could
+silently evict the correct answer and turn a plainly answerable question into a false refusal —
+worse than not reranking at all.
+
+**Fix: reranking is additive, never subtractive.** The cosine top-k is now a guaranteed floor,
+never evicted regardless of its cross-encoder score; reranking may only *add* chunks cosine
+under-ranked, up to the same budget again, and decide final ordering among the combined set. This
+keeps reranking's real benefit (surfacing and prioritising chunks cosine similarity alone
+under-ranks) without its worst failure mode (silently discarding a chunk cosine already confirmed
+relevant). Re-verified after the fix: eval suite back to 11/11, 100% retrieval precision, and the
+original findability case fixed *for real* rather than by coincidence — confirmed by direct
+inspection of cross-encoder scores before and after the `Document: {filename}` prefix (-11.4 →
++2.9 for the exact chunk in question), not just by the eval passing.
+
+The honest lesson: a bonus feature that silently regresses the primary requirement is a net
+negative, and the only way to know is to actually run the eval suite — a passing test suite
+(120/120, unchanged throughout) said nothing about this, since none of the unit tests exercise
+the full retrieval pipeline end-to-end against a real corpus. Only the eval harness, run against
+the live stack, caught it.
+
+---
+
 ## Deliberately not built
 
 - **Auth** — single-tenant demo. No signal value here relative to the time cost.
 - **Output-side prompt-leak filter** — the input-side injection defence above is tested and
   holds; scanning generated text for system-prompt fragments before it streams is the
   remaining layer, and it needs a latency budget a demo doesn't have.
-- **Hybrid search / reranking** — a sibling project of mine (ContextQuery) implemented BM25
-  + reciprocal-rank-fusion alongside semantic search and evaluated both; hybrid did not
-  reliably beat semantic-only on a small corpus. Re-running that experiment blind on an
-  equally small corpus would produce no new information, so semantic-only is used and the
-  prior finding is cited rather than repeated.
+- **Hybrid search (BM25 + RRF)** — a sibling project of mine (ContextQuery) implemented this
+  alongside semantic search and evaluated both; hybrid did not reliably beat semantic-only on
+  a small corpus. Re-running that experiment blind on an equally small corpus would produce no
+  new information, so semantic-only retrieval is used and the prior finding is cited rather
+  than repeated. Cross-encoder reranking (see above) is built, and is a different technique
+  from hybrid search — it reorders semantic search's own results, rather than fusing a second
+  retrieval method's ranking into them.
 - **Conversation summarisation for long histories** — last N turns verbatim. Summarising
   older turns is real production hardening but isn't needed to demonstrate the mechanism.
 - **Alembic migrations** — `create_all()` on startup. Correct for a single-environment demo;
   the first schema change in a real deployment would need migrations.
-- **CI pipeline** — tests and evals run locally with one command.
 
 ## Known limitations
 
