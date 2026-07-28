@@ -80,3 +80,42 @@ def test_clean_answer_has_no_contamination():
 def test_checks_are_case_insensitive():
     assert missing_terms("PYTHON and go", ["Python", "Go"]) == []
     assert present_terms("mentions acme run", ["Acme Run"])
+
+
+# --- terms match on word boundaries, not raw substrings ---------------------
+# Naive `in` made short terms nearly unfalsifiable, which is how a completeness
+# check could pass on an answer that never contained the fact.
+
+
+def test_substring_collisions_do_not_satisfy_a_term():
+    # The résumé fixture literally contains "PostgreSQL", so a naive "SQL" check was
+    # satisfied by the corpus regardless of what the model said.
+    assert missing_terms("She works on PostgreSQL pipelines.", ["SQL"]) == ["SQL"]
+    assert missing_terms("She is going to lead it.", ["Go"]) == ["Go"]
+    assert missing_terms("The documents note that.", ["not"]) == ["not"]
+
+
+def test_the_exact_false_pass_this_replaced():
+    answer = "Priya uses Python. She works on PostgreSQL pipelines and is going to lead the migration."
+
+    # Previously returned [] — a passing completeness check on an answer that never
+    # lists Go or SQL as languages.
+    assert sorted(missing_terms(answer, ["Python", "Go", "SQL"])) == ["Go", "SQL"]
+
+
+def test_real_occurrences_still_match():
+    assert missing_terms("Languages: Python, Go, SQL.", ["Python", "Go", "SQL"]) == []
+
+
+def test_numeric_terms_are_bounded_but_tolerate_adjacent_punctuation():
+    assert present_terms("guarantees 99.95% uptime", ["99.95"]) == ["99.95"]
+    assert present_terms("costs $45 per seat", ["45"]) == ["45"]
+    assert present_terms("a GPA of 3.8/4.0", ["3.8"]) == ["3.8"]
+    # A longer number that merely contains the digits must not satisfy it.
+    assert present_terms("in the year 1945", ["45"]) == []
+    assert present_terms("priced at 199.95", ["99.95"]) == []
+
+
+def test_multi_word_and_apostrophe_terms_match():
+    assert present_terms("I couldn't find that here.", ["couldn't find"])
+    assert present_terms("billed per seat monthly", ["per seat"])

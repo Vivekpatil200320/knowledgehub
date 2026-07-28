@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -38,9 +39,21 @@ app.include_router(conversations.router, prefix="/api")
 
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 with per-field detail, reduced to the fields a caller can act on.
+
+    Only `type`/`loc`/`msg` are forwarded. When a field validator rejects a value by
+    raising ValueError, Pydantic v2 puts the exception *object* into the error's `ctx`;
+    serialising that raised inside this handler and turned a validation failure into a
+    500. `input` and `url` are dropped for the same reason they aren't useful — the
+    former would echo the submitted body straight back in the response.
+    """
+    errors = [
+        {"type": e.get("type"), "loc": list(e.get("loc", [])), "msg": e.get("msg")}
+        for e in exc.errors()
+    ]
     return JSONResponse(
         status_code=422,
-        content={"detail": "Request validation failed", "errors": exc.errors()},
+        content={"detail": "Request validation failed", "errors": jsonable_encoder(errors)},
     )
 
 

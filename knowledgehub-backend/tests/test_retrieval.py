@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from app.services import retrieval_service
+from app.services import retrieval_service, vector_store
 from app.services.condensation_service import condense, format_history
 from app.services.text_splitter import split_text
 
@@ -148,7 +148,25 @@ def test_dedupe_collapses_the_same_passage_across_documents():
         "Pricing is $45 per seat.",
         "Support answers within a day.",
     ]
-    assert kept[0]["metadata"]["document_id"] == "doc-a"  # best-scoring copy first
+
+
+def test_dedupe_keeps_the_best_scoring_copy_regardless_of_input_order():
+    """The invariant the docstring promises, with the duplicates deliberately unsorted.
+
+    Keeping the first occurrence only picks the best copy if the caller happened to
+    sort first — a silent dependency on Qdrant's ordering that a second retrieval
+    source would break, and `select_context` reads chunks[0] as the top hit.
+    """
+    hits = [
+        chunk_with("Pricing is $45 per seat.", 0.31, doc="doc-weak"),
+        chunk_with("Support answers within a day.", 0.20, doc="doc-a", index=1),
+        chunk_with("Pricing is $45 per seat.", 0.62, doc="doc-strong"),
+    ]
+
+    kept = retrieval_service.dedupe(hits)
+
+    assert [c["score"] for c in kept] == [0.62, 0.20]
+    assert kept[0]["metadata"]["document_id"] == "doc-strong"
 
 
 def test_dedupe_ignores_whitespace_differences():
@@ -164,3 +182,82 @@ def test_dedupe_keeps_genuinely_different_passages():
     hits = [chunk_with("First.", 0.5), chunk_with("Second.", 0.4, index=1)]
 
     assert len(retrieval_service.dedupe(hits)) == 2
+
+
+# --- narrative_order --------------------------------------------------------
+
+
+def test_narrative_order_restores_document_reading_order():
+    """The fix for mis-paired résumé degrees: relevance order scrambles sequence."""
+    hits = [
+        chunk_with("degree line", 0.9, doc="doc-a", index=3),
+        chunk_with("header", 0.8, doc="doc-a", index=0),
+        chunk_with("university line", 0.7, doc="doc-a", index=1),
+    ]
+
+    assert [c["metadata"]["chunk_index"] for c in retrieval_service.narrative_order(hits)] == [
+        0,
+        1,
+        3,
+    ]
+
+
+def test_narrative_order_groups_by_document():
+    hits = [
+        chunk_with("b1", 0.9, doc="doc-b", index=1),
+        chunk_with("a1", 0.8, doc="doc-a", index=1),
+        chunk_with("a0", 0.7, doc="doc-a", index=0),
+    ]
+
+    ordered = retrieval_service.narrative_order(hits)
+
+    assert [(c["metadata"]["document_id"], c["metadata"]["chunk_index"]) for c in ordered] == [
+        ("doc-a", 0),
+        ("doc-a", 1),
+        ("doc-b", 1),
+    ]
+
+
+def test_narrative_order_survives_a_malformed_point():
+    """A point written by an older payload schema must not 500 the whole request."""
+    hits = [
+        chunk_with("good", 0.9, doc="doc-a", index=1),
+        {"text": "legacy", "score": 0.5, "metadata": {"document_id": "doc-a"}},
+    ]
+
+    ordered = retrieval_service.narrative_order(hits)
+
+    assert [c["text"] for c in ordered] == ["legacy", "good"]  # missing index sorts as 0
+
+
+# --- vector_store payload normalisation --------------------------------------
+
+
+def test_normalise_hit_fills_missing_payload_fields():
+    """Guards the whole pipeline: a legacy point must degrade, not raise."""
+    normalised = vector_store.normalise_hit({}, 0.42)
+
+    assert normalised["text"] == ""
+    assert normalised["score"] == 0.42
+    assert normalised["metadata"] == {
+        "document_id": "",
+        "filename": "unknown",
+        "chunk_index": 0,
+    }
+
+
+def test_normalise_hit_coerces_a_string_chunk_index():
+    normalised = vector_store.normalise_hit(
+        {"text": "t", "document_id": "d", "filename": "f.md", "chunk_index": "3"}, 0.1
+    )
+
+    assert normalised["metadata"]["chunk_index"] == 3
+
+
+def test_normalise_hit_preserves_index_zero():
+    """`or`-style defaulting would turn a legitimate 0 into a default."""
+    normalised = vector_store.normalise_hit(
+        {"text": "t", "document_id": "d", "filename": "f.md", "chunk_index": 0}, 0.1
+    )
+
+    assert normalised["metadata"]["chunk_index"] == 0

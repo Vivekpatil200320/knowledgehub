@@ -103,6 +103,40 @@ def test_derive_title_handles_a_single_long_word():
     assert len(title) <= 61
 
 
+@pytest.mark.parametrize("blank", ["   ", "\t\n ", ""])
+def test_derive_title_returns_none_when_there_is_nothing_nameable(blank):
+    """Never "" — it is falsy, so the name-once guard would fire again next turn,
+    and the sidebar's `title ?? "Untitled chat"` fallback does not catch it either."""
+    assert derive_title(blank) is None
+
+
+def test_derive_title_never_returns_an_empty_string_after_truncation():
+    """Punctuation-only tails strip back to nothing; the ellipsis must still have a stem."""
+    title = derive_title("." * 200)
+
+    assert title is not None
+    assert title.rstrip("…") != ""
+
+
+def test_blank_message_is_rejected_before_it_reaches_the_model(client):
+    """min_length=1 alone lets a single space through."""
+    conversation_id = new_conversation(client)
+
+    response = send(client, conversation_id, "   ")
+
+    assert response.status_code == 422
+    assert client.get("/api/conversations").json()[0]["title"] is None
+
+
+def test_message_content_is_stored_trimmed(client):
+    conversation_id = new_conversation(client)
+    send(client, conversation_id, "  What is the refund policy?  ")
+
+    messages = client.get(f"/api/conversations/{conversation_id}/messages").json()
+    assert messages[0]["content"] == "What is the refund policy?"
+    assert client.get("/api/conversations").json()[0]["title"] == "What is the refund policy?"
+
+
 # --- activity ordering ------------------------------------------------------
 
 
@@ -147,3 +181,22 @@ def test_delete_removes_conversation_and_messages(client):
 
 def test_delete_unknown_conversation_is_404(client):
     assert client.delete("/api/conversations/does-not-exist").status_code == 404
+
+
+def test_validation_errors_are_json_serialisable(client):
+    """A custom validator raising ValueError must still produce a usable 422.
+
+    Pydantic v2 stores the raised exception object in the error's `ctx`; forwarding
+    `exc.errors()` verbatim made the handler itself raise, so the client saw a 500.
+    """
+    conversation_id = new_conversation(client)
+
+    response = send(client, conversation_id, "   ")
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["detail"] == "Request validation failed"
+    assert body["errors"], "field-level detail should survive sanitising"
+    assert body["errors"][0]["loc"][-1] == "content"
+    # The submitted body must not be echoed back in the error payload.
+    assert all("input" not in e for e in body["errors"])

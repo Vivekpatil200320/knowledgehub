@@ -182,17 +182,29 @@ Ten cases, deterministic substring assertions, no LLM judge — fast, free, and 
 python evals/eval_pipeline.py    # ingests the corpus if needed, then runs
 ```
 
-Each case declares three kinds of check, because a presence-only faithfulness metric is
+Each case declares its checks explicitly, because a presence-only faithfulness metric is
 what let real bugs ship past the first version of this suite:
 
-- **`expected_all`** — every string must appear. Catches terse answers. `"AI Software
+- **`expected_all`** — every term must appear. Catches terse answers. `"AI Software
   Engineer."` was once a whole answer to "describe him"; a completeness check rejects it.
-- **`forbidden`** — no string may appear. Catches hallucinated facts and cross-document
+- **`forbidden`** — no term may appear. Catches hallucinated facts and cross-document
   contamination — things a keyword-presence check can't see, because you can't assert the
   *presence* of a fact you didn't expect.
 - **`expected_source`** — the document a correct answer must cite. A system with broken
   memory still returns a fluent pricing answer to "what about pricing?"; it just cites the
   wrong document, so which document is cited is tracked per-case.
+- **`expect_no_citations`** — the structural refusal signal. The refusal short-circuit
+  returns *before* the generation call, so a real refusal cannot carry sources. Asserting
+  only the wording let a regression that answered *with* citations pass, provided the text
+  contained a hedging word.
+
+**Terms match on alphanumeric boundaries, not raw substrings.** Naive `in` made short terms
+nearly unfalsifiable: `"SQL"` was satisfied by `"PostgreSQL"` — which the résumé fixture
+contains — `"Go"` by `"going"`, and `"not"` by `"note"`. The completeness check could
+therefore pass on an answer that never contained the fact, which is precisely the failure
+this harness exists to catch. `\b` would have been the wrong tool, since several terms are
+numeric (`99.95`, `0.000024`): boundary assertions on alphanumerics let `$45` and `45%`
+satisfy `45` while `1945` does not.
 
 **Retrieval precision 100% · Completeness 100% · Contamination-free 100% · 10/10 passed**
 
@@ -226,7 +238,16 @@ needs it **displaced**. Asserting only the first would let the "invented relatio
 actual buggy answers observed during development — the terse `"AI Software Engineer."`, a
 hallucinated third degree, a contaminated skills answer — and asserts each is rejected. That
 way the suite's ability to catch a regression doesn't rest on reproducing an LLM's
-nondeterministic output.
+nondeterministic output. It also pins the substring-collision cases, since those were a
+false-pass the harness itself shipped with: the tests assert that `"PostgreSQL"` does *not*
+satisfy `"SQL"`, that `"going"` does not satisfy `"Go"`, and that `"1945"` does not
+satisfy `"45"` — while the genuine occurrences still match.
+
+**A note on re-running.** `ingest_corpus` treats a document as present only once it reaches
+`ready`, and deletes and re-uploads anything left `failed`. Skipping on filename alone meant
+a document lost to a transient embedding error was never retried, so the suite ran against an
+incomplete corpus and reported retrieval failures that pointed at the retrieval logic rather
+than at the missing file.
 
 ---
 
@@ -279,7 +300,7 @@ npm run dev               # http://localhost:3005
 
 Tests:
 ```bash
-cd knowledgehub-backend && pytest        # 40 tests
+cd knowledgehub-backend && pytest        # 59 tests
 ```
 
 ---

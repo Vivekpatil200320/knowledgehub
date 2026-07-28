@@ -38,13 +38,20 @@ def _load_history(db: Session, conversation_id: str) -> list[Message]:
 TITLE_MAX_CHARS = 60
 
 
-def derive_title(content: str) -> str:
+def derive_title(content: str) -> str | None:
     """Condense a first message into a sidebar-sized conversation name.
 
     Deliberately not an LLM call: titling every new conversation would add a round
     trip and a failure mode to the hot path for something a truncation handles fine.
+
+    Returns None when there is nothing nameable. An empty string would be worse than
+    None: it is falsy, so the "name it once" guard below would fire again on the next
+    turn and silently rename the thread, and the sidebar's `title ?? "Untitled chat"`
+    fallback does not catch "" either, leaving a blank row.
     """
     collapsed = " ".join(content.split())
+    if not collapsed:
+        return None
     if len(collapsed) <= TITLE_MAX_CHARS:
         return collapsed
 
@@ -52,7 +59,10 @@ def derive_title(content: str) -> str:
     # Prefer a word boundary, but only if it doesn't leave a stub.
     if " " in clipped[TITLE_MAX_CHARS // 2 :]:
         clipped = clipped[: clipped.rindex(" ")]
-    return clipped.rstrip(" ,.;:") + "…"
+
+    trimmed = clipped.rstrip(" ,.;:")
+    # Punctuation-only input can strip back to nothing; fall back to the hard clip.
+    return (trimmed or clipped) + "…"
 
 
 def _persist_user_message(db: Session, conversation_id: str, content: str) -> Message:
@@ -63,7 +73,9 @@ def _persist_user_message(db: Session, conversation_id: str, content: str) -> Me
     # a thread that renamed itself on every turn would be unfindable in the sidebar.
     conversation = db.get(Conversation, conversation_id)
     if conversation is not None and not conversation.title:
-        conversation.title = derive_title(content)
+        title = derive_title(content)
+        if title:
+            conversation.title = title
 
     db.commit()
     db.refresh(message)

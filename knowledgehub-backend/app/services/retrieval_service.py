@@ -11,10 +11,18 @@ def dedupe(chunks: list[dict]) -> list[dict]:
     passage twice: the model re-reads it, the citation list repeats itself, and
     half the context budget buys nothing. Keyed on the text rather than on
     (document_id, chunk_index) so it catches copies across documents too.
+
+    The result is ordered by score descending. Sorting here rather than relying on
+    the caller is what makes "best-scoring copy" true: reading the first occurrence
+    only picks the best one if the input happened to arrive sorted, which is a
+    silent dependency on Qdrant's ordering that a second retrieval source would break.
+    `select_context` also reads `chunks[0]` as the top hit, so that ordering is load-bearing.
     """
+    ranked = sorted(chunks, key=lambda c: c["score"], reverse=True)
+
     seen: set[str] = set()
     unique = []
-    for chunk in chunks:
+    for chunk in ranked:
         key = " ".join(chunk["text"].split())
         if key in seen:
             continue
@@ -56,10 +64,18 @@ def narrative_order(chunks: list[dict]) -> list[dict]:
     model pairs each degree with the wrong university and invents a third. Relevance
     decides what the model sees — the document decides what order it reads them in.
     """
-    return sorted(
-        chunks,
-        key=lambda c: (c["metadata"]["document_id"], c["metadata"]["chunk_index"]),
-    )
+    def position(chunk: dict) -> tuple[str, int]:
+        metadata = chunk.get("metadata", {})
+        index = metadata.get("chunk_index")
+        # Defensive: `vector_store.normalise_hit` guarantees an int for anything that
+        # came through retrieval, but this is a public helper and a None here would
+        # raise TypeError mid-sort rather than merely ordering badly.
+        return (
+            str(metadata.get("document_id") or ""),
+            index if isinstance(index, int) else 0,
+        )
+
+    return sorted(chunks, key=position)
 
 
 def to_citations(chunks: list[dict]) -> list[dict]:

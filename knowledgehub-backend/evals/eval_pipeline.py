@@ -4,22 +4,29 @@ Run against a live server with the eval corpus ingested:
 
     python evals/eval_pipeline.py
 
-Assertions are plain substring checks rather than an LLM judge: they are fast,
+Assertions are deterministic term matches rather than an LLM judge: they are fast,
 free, and reproducible. The tradeoff is brittleness to phrasing, so each case
 declares its checks explicitly:
 
-  expected_source  the document a correct answer must cite (None = refusal)
-  expected_all     every string must appear (completeness — guards terse answers)
-  expected_any     at least one must appear (phrasing tolerance, e.g. refusals)
-  forbidden        no string may appear (no hallucination, no cross-doc bleed)
+  expected_source      the document a correct answer must cite (None = no citation expected)
+  expected_all         every term must appear (completeness — guards terse answers)
+  expected_any         at least one must appear (phrasing tolerance, e.g. refusals)
+  forbidden            no term may appear (no hallucination, no cross-doc bleed)
+  expect_no_citations  the answer must cite nothing (the structural refusal signal)
 
-The three "all/any/forbidden" checks exist because a presence-only faithfulness
-metric passed while real bugs shipped: a one-line answer satisfies "contains a
-keyword", and a hallucinated or cross-contaminated fact is never a keyword you
-were checking *for*. Completeness and forbidden checks close both gaps.
+The all/any/forbidden checks exist because a presence-only faithfulness metric
+passed while real bugs shipped: a one-line answer satisfies "contains a keyword",
+and a hallucinated or cross-contaminated fact is never a keyword you were checking
+*for*.
+
+Terms match on word boundaries, not raw substrings. Naive `in` made short terms
+nearly unfalsifiable: "SQL" was satisfied by "PostgreSQL", "Go" by "going", and
+"not" by "note" — so a completeness check could pass on an answer that never
+contained the fact, which is the exact failure this harness exists to catch.
 """
 
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -121,18 +128,48 @@ CASES = [
         "name": "refusal: out of corpus",
         "turns": ["What is the capital of France?"],
         "expected_source": None,
-        "expected_any": ["couldn't find", "not", "don't", "cannot", "unable", "outside"],
+        # Citing nothing is the structural signal: the refusal short-circuit returns
+        # before the generation call, so a refusal cannot carry sources. Asserting the
+        # wording alone would let a regression that answers *with* citations pass, as
+        # long as the text happened to contain a hedging word.
+        "expect_no_citations": True,
+        "expected_any": [
+            "couldn't find",
+            "could not find",
+            "don't have",
+            "do not have",
+            "cannot",
+            "can't",
+            "unable",
+            "no information",
+        ],
         "forbidden": ["Paris"],
     },
 ]
 
 
 def ingest_corpus(client: httpx.Client) -> None:
-    existing = {d["filename"] for d in client.get(f"{BASE_URL}/api/documents").json()}
-    pending = []
+    """Bring the server's corpus up to date with `evals/corpus/`.
 
+    A document is only treated as present if it actually reached `ready`. Skipping on
+    filename alone meant a document left `failed` by a transient ingestion error (an
+    embedding rate limit, a Qdrant blip) was never retried, so the suite silently ran
+    against an incomplete corpus and reported retrieval failures that pointed at the
+    retrieval logic instead of at the missing file.
+    """
+    documents = client.get(f"{BASE_URL}/api/documents").json()
+    usable = {d["filename"] for d in documents if d["status"] in {"ready", "pending", "processing"}}
+    stale = [d for d in documents if d["status"] == "failed"]
+
+    # Remove the failed rows first: re-uploading without deleting would leave a
+    # duplicate filename in the document list and orphan the failed row forever.
+    for document in stale:
+        print(f"Re-ingesting failed document: {document['filename']}")
+        client.delete(f"{BASE_URL}/api/documents/{document['id']}")
+
+    pending = []
     for path in sorted(list(CORPUS_DIR.glob("*.md")) + list(CORPUS_DIR.glob("*.pdf"))):
-        if path.name in existing:
+        if path.name in usable:
             continue
         with path.open("rb") as handle:
             response = client.post(
@@ -145,29 +182,53 @@ def ingest_corpus(client: httpx.Client) -> None:
         return
 
     print(f"Ingesting {len(pending)} document(s)…")
-    for _ in range(60):
+    statuses: dict[str, str] = {}
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
         statuses = {
             d["id"]: d["status"] for d in client.get(f"{BASE_URL}/api/documents").json()
         }
         if all(statuses.get(doc_id) in {"ready", "failed"} for doc_id in pending):
             break
         time.sleep(2)
+    else:
+        print("WARNING: ingestion did not settle within 120s; results may be unreliable.")
+
+    failed = [doc_id for doc_id in pending if statuses.get(doc_id) == "failed"]
+    if failed:
+        print(f"WARNING: {len(failed)} document(s) failed to ingest; cases needing them will fail.")
 
 
 def check_retrieval_hit(citations: list[dict], expected_source) -> bool | None:
+    """Whether the expected document was cited. None when the case names no source.
+
+    A case with no `expected_source` is not asserting an absence here — use
+    `expect_no_citations` for that. This only reports "not applicable".
+    """
     if expected_source is None:
-        return None  # not applicable — refusal cites nothing
+        return None
     return any(expected_source in c["filename"] for c in citations)
 
 
+def term_matches(answer: str, term: str) -> bool:
+    """Match a term on alphanumeric boundaries.
+
+    `\\b` is wrong here because several terms are numeric or punctuated ("99.95",
+    "0.000024", "3.8"): `\\b` would anchor against the trailing digit and let "199.95"
+    satisfy "99.95". Asserting the neighbours are not alphanumeric instead means
+    "$45." and "45%" match "45" while "1945" does not, and "PostgreSQL" no longer
+    satisfies "SQL".
+    """
+    pattern = rf"(?<![0-9A-Za-z]){re.escape(term)}(?![0-9A-Za-z])"
+    return re.search(pattern, answer, re.IGNORECASE) is not None
+
+
 def missing_terms(answer: str, terms: list[str]) -> list[str]:
-    lowered = answer.lower()
-    return [t for t in terms if t.lower() not in lowered]
+    return [t for t in terms if not term_matches(answer, t)]
 
 
 def present_terms(answer: str, terms: list[str]) -> list[str]:
-    lowered = answer.lower()
-    return [t for t in terms if t.lower() in lowered]
+    return [t for t in terms if term_matches(answer, t)]
 
 
 def run_case(client: httpx.Client, turns: list[str]) -> dict:
@@ -206,17 +267,23 @@ def main() -> int:
             outcome = run_case(client, case["turns"])
             answer = outcome["answer"]
 
+            cited_files = sorted({c["filename"] for c in outcome["citations"]})
+
             retrieval_hit = check_retrieval_hit(outcome["citations"], case["expected_source"])
             missing = missing_terms(answer, case.get("expected_all", []))
             any_terms = case.get("expected_any", [])
             any_ok = bool(present_terms(answer, any_terms)) if any_terms else True
             leaked = present_terms(answer, case.get("forbidden", []))
+            citations_ok = not (
+                case.get("expect_no_citations", False) and outcome["citations"]
+            )
 
             passed = (
                 retrieval_hit is not False
                 and not missing
                 and any_ok
                 and not leaked
+                and citations_ok
             )
 
             results.append(
@@ -230,10 +297,11 @@ def main() -> int:
                     "any_ok": any_ok,
                     "contamination_free": not leaked,
                     "leaked_terms": leaked,
+                    "citations_ok": citations_ok,
                     "passed": passed,
                     "latency_s": outcome["latency_s"],
                     "answer": answer,
-                    "cited_files": sorted({c["filename"] for c in outcome["citations"]}),
+                    "cited_files": cited_files,
                 }
             )
 
@@ -254,9 +322,14 @@ def main() -> int:
                 print(f"      missing: {r['missing_terms']}")
             if r["leaked_terms"]:
                 print(f"      leaked:  {r['leaked_terms']}")
+            if not r["citations_ok"]:
+                print(f"      expected no citations, got: {r['cited_files']}")
 
     applicable = [r for r in results if r["retrieval_hit"] is not None]
-    precision = sum(r["retrieval_hit"] for r in applicable) / len(applicable)
+    # Guard the degenerate all-refusal suite rather than dividing by zero.
+    precision = (
+        sum(r["retrieval_hit"] for r in applicable) / len(applicable) if applicable else 1.0
+    )
     completeness = sum(r["complete"] and r["any_ok"] for r in results) / len(results)
     clean = sum(r["contamination_free"] for r in results) / len(results)
     passed = sum(r["passed"] for r in results)

@@ -70,18 +70,34 @@ def search(query_embedding: list[float], top_k: int) -> list[dict]:
         with_payload=True,
     ).points
 
-    return [
-        {
-            "text": hit.payload.get("text", ""),
-            "score": hit.score,
-            "metadata": {
-                "document_id": hit.payload.get("document_id"),
-                "filename": hit.payload.get("filename"),
-                "chunk_index": hit.payload.get("chunk_index"),
-            },
-        }
-        for hit in hits
-    ]
+    return [normalise_hit(hit.payload or {}, hit.score) for hit in hits]
+
+
+def normalise_hit(payload: dict, score: float) -> dict:
+    """Coerce a stored point into the shape the rest of the pipeline assumes.
+
+    The vector store outlives the code that wrote to it: a collection can hold points
+    from an earlier payload schema, and orphans survive a database reset. Downstream
+    code sorts on `chunk_index` and validates citations against `int`/`str`, so a
+    missing key would surface as a TypeError or a ValidationError — a 500 on every
+    query that happens to retrieve that point — rather than a slightly worse answer.
+    Normalising here keeps that failure contained to the one bad point.
+    """
+    raw_index = payload.get("chunk_index")
+    try:
+        chunk_index = int(raw_index)
+    except (TypeError, ValueError):
+        chunk_index = 0
+
+    return {
+        "text": payload.get("text") or "",
+        "score": score,
+        "metadata": {
+            "document_id": str(payload.get("document_id") or ""),
+            "filename": str(payload.get("filename") or "unknown"),
+            "chunk_index": chunk_index,
+        },
+    }
 
 
 def delete_document_vectors(document_id: str) -> None:
