@@ -9,3 +9,7 @@ node_modules/
 # prefixes — it must never ship with the submission, in git or in a zip.
 code_review.md
 CLAUDE.md
+
+# Local editor/tool state, not part of the project.
+.obsidian/
+graphify-out/
