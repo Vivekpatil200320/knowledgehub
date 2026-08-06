@@ -22,10 +22,18 @@ def derive_document_title(text: str) -> str | None:
     query about content that isn't there. In every document seen so far, the true
     subject — a person's name, or a "# Title" heading — is the first non-empty line;
     contact details and body text come after it, not before.
+
+    Skips decorative separator lines (a row of "=", "-", "*", "~", or similar) rather
+    than treating them as the first non-empty line. Observed live: a plain-text
+    document opening with an 80-character "====" banner above its real title produced
+    a starter question asking "What is [80 = characters] about?" — the banner is
+    non-blank, so the naive first-non-empty-line rule took it as the title outright.
+    A line with no alphanumeric content can't be a title, so it's treated the same as
+    a blank line here.
     """
     for line in text.splitlines():
         stripped = line.strip().lstrip("#").strip()
-        if not stripped:
+        if not stripped or not any(char.isalnum() for char in stripped):
             continue
         if len(stripped) <= TITLE_MAX_CHARS:
             return stripped

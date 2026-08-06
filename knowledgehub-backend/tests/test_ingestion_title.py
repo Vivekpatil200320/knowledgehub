@@ -40,6 +40,30 @@ def test_truncates_a_long_first_line_on_a_word_boundary():
     assert not title.rstrip("…").endswith(" ")
 
 
+def test_skips_a_decorative_separator_banner():
+    """Reproduces a live bug: GOT.txt opens with an 80-char '=' banner above its
+    real title. The banner is non-blank, so the naive first-non-empty-line rule
+    took it as the title, producing a starter question that asked "What is
+    [80 equals signs] about?" instead of naming the document."""
+    text = (
+        "================================================================================\n"
+        "                     GAME OF THRONES: COMPREHENSIVE SAGA SUMMARY\n"
+        "================================================================================\n"
+        "\"When you play the game of thrones, you win or you die.\"\n"
+    )
+    assert derive_document_title(text) == "GAME OF THRONES: COMPREHENSIVE SAGA SUMMARY"
+
+
+def test_skips_separator_lines_of_various_characters():
+    for separator in ["----------------", "********", "~~~~~~~~~~", "________"]:
+        text = f"{separator}\nReal Title Here\nBody text."
+        assert derive_document_title(text) == "Real Title Here", separator
+
+
+def test_returns_none_when_the_whole_document_is_separators():
+    assert derive_document_title("=====\n-----\n*****\n") is None
+
+
 def test_returns_none_for_blank_text():
     assert derive_document_title("   \n\n   \n") is None
 
